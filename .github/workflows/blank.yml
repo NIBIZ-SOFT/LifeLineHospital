@@ -17,7 +17,7 @@ jobs:
       run: ls -la
       shell: bash
 
-    - name: Setup FTP deployment
+    - name: Setup FTP deployment (Main Application)
       uses: SamKirkland/FTP-Deploy-Action@4.3.0
       with:
         server: ftp.nibizsoft.net
@@ -35,3 +35,12 @@ jobs:
           *.md
           .gitignore
           database_migration.sql
+
+    - name: Setup FTP deployment (LifeLine Theme)
+      uses: SamKirkland/FTP-Deploy-Action@4.3.0
+      with:
+        server: ftp.nibizsoft.net
+        username: llhtheme@nibizsoft.net
+        password: _E6;c)Rf#OH4.uPS
+        local-dir: ./theme/
+        server-dir: /
