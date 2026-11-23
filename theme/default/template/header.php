@@ -922,8 +922,7 @@ if (
         ';
     }
 }
-// Land Owner Section (No Permission Check)
-
+// Land Owner Section (Restricted to Admin / Project Location)
 $base   = isset($_GET['Base']) ? $_GET['Base'] : '';
 $script = isset($_GET['Script']) ? $_GET['Script'] : '';
 
@@ -935,39 +934,40 @@ $isLandModuleActive = ($isLandOwner || $isLandPurchase || $isLandPurchaseReport)
 $collapseClass      = ($isLandOwner || $isLandPurchase || $isLandPurchaseReport) ? 'show' : '';
 $linkCollapsed      = ($isLandOwner || $isLandPurchase || $isLandPurchaseReport) ? '' : 'collapsed';
 
+if (GetPermission("OptionSettings", true) || GetPermission("OptionProjectLocation", true)) {
+    $BeforeMainContent .= '
+        <li class="sidebar-header">LAND MANAGEMENT</li>
 
-$BeforeMainContent .= '
-    <li class="sidebar-header">LAND MANAGEMENT</li>
+        <li class="sidebar-item ' . $isLandModuleActive . '">
+            <a class="sidebar-link ' . $linkCollapsed . '" data-bs-toggle="collapse" href="#landOwnerMenu" role="button" aria-expanded="' . ($collapseClass ? 'true' : 'false') . '" aria-controls="landOwnerMenu">
+                <i class="align-middle fas fa-map-marked-alt"></i>
+                <span class="align-middle">Land Owner Module</span>
+            </a>
 
-    <li class="sidebar-item ' . $isLandModuleActive . '">
-        <a class="sidebar-link ' . $linkCollapsed . '" data-bs-toggle="collapse" href="#landOwnerMenu" role="button" aria-expanded="' . ($collapseClass ? 'true' : 'false') . '" aria-controls="landOwnerMenu">
-            <i class="align-middle fas fa-map-marked-alt"></i>
-            <span class="align-middle">Land Owner Module</span>
-        </a>
+            <ul class="sidebar-dropdown list-unstyled collapse ' . $collapseClass . '" id="landOwnerMenu">
 
-        <ul class="sidebar-dropdown list-unstyled collapse ' . $collapseClass . '" id="landOwnerMenu">
+                <li class="sidebar-item ' . ($isLandOwner ? 'active' : '') . '">
+                    <a class="sidebar-link" href="' . ApplicationURL("LandOwner", "Manage") . '">
+                        <i class="fas fa-user me-2"></i> Land Owner
+                    </a>
+                </li>
 
-            <li class="sidebar-item ' . ($isLandOwner ? 'active' : '') . '">
-                <a class="sidebar-link" href="' . ApplicationURL("LandOwner", "Manage") . '">
-                    <i class="fas fa-user me-2"></i> Land Owner
-                </a>
-            </li>
+                <li class="sidebar-item ' . ($isLandPurchase ? 'active' : '') . '">
+                    <a class="sidebar-link" href="' . ApplicationURL("LandPurchase", "Manage") . '">
+                        <i class="fas fa-shopping-cart me-2"></i> Land Purchase
+                    </a>
+                </li>
 
-            <li class="sidebar-item ' . ($isLandPurchase ? 'active' : '') . '">
-                <a class="sidebar-link" href="' . ApplicationURL("LandPurchase", "Manage") . '">
-                    <i class="fas fa-shopping-cart me-2"></i> Land Purchase
-                </a>
-            </li>
+                <li class="sidebar-item ' . ($isLandPurchaseReport ? 'active' : '') . '">
+                    <a class="sidebar-link" href="' . ApplicationURL("LandPurchaseReport", "ReportManage") . '">
+                        <i class="fas fa-file-alt me-2"></i> Land Purchase Report
+                    </a>
+                </li>
 
-            <li class="sidebar-item ' . ($isLandPurchaseReport ? 'active' : '') . '">
-                <a class="sidebar-link" href="' . ApplicationURL("LandPurchaseReport", "ReportManage") . '">
-                    <i class="fas fa-file-alt me-2"></i> Land Purchase Report
-                </a>
-            </li>
-
-        </ul>
-    </li>
-';
+            </ul>
+        </li>
+    ';
+}
 
 // HRM Section (No Permission Check)
 

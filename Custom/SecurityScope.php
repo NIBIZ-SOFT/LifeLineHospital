@@ -20,32 +20,32 @@ class SecurityScope {
         }
         self::$initialized = true;
 
+        // Auto-run schema migrations
+        self::runSql("ALTER TABLE tbluser ADD COLUMN OptionCustomerScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionCustomerDelete");
+        self::runSql("ALTER TABLE tbluser ADD COLUMN OptionSalesScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionSalesDelete");
+        self::runSql("ALTER TABLE tbluser ADD COLUMN OptionCommissionScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionCommissionReports");
+        self::runSql("ALTER TABLE tblcustomer ADD COLUMN CreatedByUserID INT(11) NOT NULL DEFAULT 0 AFTER CustomerID");
+        self::runSql("CREATE INDEX idx_tblcustomer_createdby ON tblcustomer(CreatedByUserID)");
+    }
+
+    /**
+     * Universal SQL execution helper (supports mysql_*, mysqli_*, and globals)
+     */
+    public static function runSql($sql) {
         if (function_exists('mysql_query')) {
-            // Check & Add OptionCustomerScope in tbluser
-            $res = @mysql_query("SHOW COLUMNS FROM tbluser LIKE 'OptionCustomerScope'");
-            if ($res && mysql_num_rows($res) == 0) {
-                @mysql_query("ALTER TABLE tbluser ADD COLUMN OptionCustomerScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionCustomerDelete");
-            }
-
-            // Check & Add OptionSalesScope in tbluser
-            $res = @mysql_query("SHOW COLUMNS FROM tbluser LIKE 'OptionSalesScope'");
-            if ($res && mysql_num_rows($res) == 0) {
-                @mysql_query("ALTER TABLE tbluser ADD COLUMN OptionSalesScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionSalesDelete");
-            }
-
-            // Check & Add OptionCommissionScope in tbluser
-            $res = @mysql_query("SHOW COLUMNS FROM tbluser LIKE 'OptionCommissionScope'");
-            if ($res && mysql_num_rows($res) == 0) {
-                @mysql_query("ALTER TABLE tbluser ADD COLUMN OptionCommissionScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionCommissionReports");
-            }
-
-            // Check & Add CreatedByUserID in tblcustomer
-            $res = @mysql_query("SHOW COLUMNS FROM tblcustomer LIKE 'CreatedByUserID'");
-            if ($res && mysql_num_rows($res) == 0) {
-                @mysql_query("ALTER TABLE tblcustomer ADD COLUMN CreatedByUserID INT(11) NOT NULL DEFAULT 0 AFTER CustomerID");
-                @mysql_query("CREATE INDEX idx_tblcustomer_createdby ON tblcustomer(CreatedByUserID)");
-            }
+            return @mysql_query($sql);
         }
+        global $conn, $link, $db, $mysqli;
+        $connection = null;
+        if (!empty($conn) && is_object($conn)) $connection = $conn;
+        elseif (!empty($link) && is_object($link)) $connection = $link;
+        elseif (!empty($db) && is_object($db)) $connection = $db;
+        elseif (!empty($mysqli) && is_object($mysqli)) $connection = $mysqli;
+
+        if ($connection && function_exists('mysqli_query')) {
+            return @mysqli_query($connection, $sql);
+        }
+        return false;
     }
 
     /**
@@ -101,10 +101,26 @@ class SecurityScope {
         if ($directorUserID <= 0) return array();
 
         $ids = array();
-        if (function_exists('mysql_query')) {
-            $q = @mysql_query("SELECT UserID FROM tbluser WHERE referred_by = " . $directorUserID . " AND UserIsActive = 1");
-            if ($q) {
-                while ($r = mysql_fetch_assoc($q)) {
+        if (function_exists('SQL_Select')) {
+            $rows = SQL_Select("User", "referred_by = " . $directorUserID . " AND UserIsActive = 1", "", false);
+            if (is_array($rows)) {
+                foreach ($rows as $r) {
+                    if (isset($r['UserID'])) {
+                        $ids[] = intval($r['UserID']);
+                    }
+                }
+                return $ids;
+            }
+        }
+
+        $q = self::runSql("SELECT UserID FROM tbluser WHERE referred_by = " . $directorUserID . " AND UserIsActive = 1");
+        if ($q) {
+            if (function_exists('mysql_fetch_assoc')) {
+                while ($r = @mysql_fetch_assoc($q)) {
+                    $ids[] = intval($r['UserID']);
+                }
+            } elseif (function_exists('mysqli_fetch_assoc')) {
+                while ($r = @mysqli_fetch_assoc($q)) {
                     $ids[] = intval($r['UserID']);
                 }
             }
@@ -155,7 +171,7 @@ class SecurityScope {
                    OR SalespersonUserID IN ({$idList}) 
                    OR SellerID IN ({$idList})
                    OR SalerNameID IN (" . implode(',', $salerNames) . ")
-            ) OR {$prefix}CreatedByUserID IN ({$idList}))";
+            ) OR ({$prefix}CreatedByUserID IN ({$idList}) AND {$prefix}CreatedByUserID > 0))";
             return $cond;
         }
 
@@ -163,9 +179,9 @@ class SecurityScope {
         $cond = "({$prefix}CustomerID IN (
             SELECT CustomerID FROM tblsales 
             WHERE SalespersonUserID = {$uid} 
-               OR SellerID = {$uid}
+               OR SellerID = {$uid} 
                OR SalerNameID = 'user_{$uid}'
-        ) OR {$prefix}CreatedByUserID = {$uid})";
+        ) OR ({$prefix}CreatedByUserID = {$uid} AND {$prefix}CreatedByUserID > 0))";
         return $cond;
     }
 
