@@ -25,4 +25,13 @@ jobs:
         password: z)Zvf56mojIV
         local-dir: ./
         server-dir: /
-        exclude: .gitignore
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/.github*
+          **/.github*/**
+          .git/**
+          .github/**
+          *.md
+          .gitignore
+          database_migration.sql
