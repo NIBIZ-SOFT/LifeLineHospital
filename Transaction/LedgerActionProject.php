@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: NiBiZ Soft
@@ -8,30 +9,46 @@
 
 $Settings = SQL_Select("Settings", "SettingsID=1", "", true);
 
-if (!empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && empty($_POST["HeadOfAccountID"]) && empty($_POST["IncomeExpenseTypeID"]) ) {
-    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and  Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' order by TransactionID ASC");
-
-}elseif (!empty($_POST["CategoryID"]) && empty($_POST["HeadOfAccountID"]) ) {
-    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}'  order by TransactionID ASC");
-
-}elseif (!empty($_POST["CategoryID"]) && !empty($_POST["HeadOfAccountID"]) &&  !empty($_POST["FromDate"]) && !empty($_POST["ToDate"])  ){
-
-    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' and  Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}'  order by TransactionID ASC");
-
-
-}elseif (!empty($_POST["CategoryID"]) && !empty($_POST["HeadOfAccountID"])  ){
+// Case 1: CategoryID + Date Range + HeadOfAccountID (All filters provided)
+if (!empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && !empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by TransactionID ASC");
+}
+// Case 2: CategoryID + HeadOfAccountID (without date range)
+elseif (!empty($_POST["CategoryID"]) && !empty($_POST["HeadOfAccountID"])) {
     $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' order by TransactionID ASC");
-
-} else {
-
-
-    header("location:index.php?Theme=default&Base=Transaction&Script=LedgerManage");
+}
+// Case 3: CategoryID + Date Range (without HeadOfAccountID)
+elseif (!empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by TransactionID ASC");
+}
+// Case 4: Only CategoryID
+elseif (!empty($_POST["CategoryID"]) && empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' order by TransactionID ASC");
+}
+// Case 5: Date Range + HeadOfAccountID (CategoryID is empty - show ALL projects)
+elseif (empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && !empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by TransactionID ASC");
+}
+// Case 6: Only HeadOfAccountID (CategoryID is empty - show ALL projects)
+elseif (empty($_POST["CategoryID"]) && !empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' order by TransactionID ASC");
+}
+// Case 7: Only Date Range (no CategoryID, no HeadOfAccountID - show ALL)
+elseif (empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && empty($_POST["HeadOfAccountID"])) {
+    $JournalDetails = SQL_Select("Transaction", "Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by TransactionID ASC");
+}
+// Default: Show all transactions
+else {
+    $JournalDetails = SQL_Select("Transaction", "1=1 order by TransactionID ASC");
 }
 
 
 //$ProjectName = $JournalDetails[0]["ProjectName"];
-$ProjectName = GetCategoryName($JournalDetails[0]["ProjectID"]);
-
+if (!empty($_POST["CategoryID"])) {
+    $ProjectName = GetCategoryName($JournalDetails[0]["ProjectID"]);
+} else {
+    $ProjectName = "All Projects";
+}
 
 if (count($JournalDetails) > 0) {
 
@@ -46,13 +63,19 @@ if (count($JournalDetails) > 0) {
 
         if (empty($uniqHeadOfAccountId)) continue;
 
-        $HeadDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID= '{$uniqHeadOfAccountId}' order by Date");
-
-
-
-        if(!empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && empty($_POST["ExpenseHead"]) ){
-            $HeadDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID= '{$uniqHeadOfAccountId}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' ");
-
+        // Build HeadDetails query based on whether CategoryID is provided
+        if (!empty($_POST["CategoryID"]) && !empty($_POST["FromDate"]) && !empty($_POST["ToDate"])) {
+            // CategoryID + Date Range
+            $HeadDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID= '{$uniqHeadOfAccountId}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by Date");
+        } elseif (!empty($_POST["CategoryID"])) {
+            // Only CategoryID
+            $HeadDetails = SQL_Select("Transaction", "ProjectID='{$_REQUEST["CategoryID"]}' and HeadOfAccountID= '{$uniqHeadOfAccountId}' order by Date");
+        } elseif (!empty($_POST["FromDate"]) && !empty($_POST["ToDate"])) {
+            // Only Date Range (no CategoryID - show all projects)
+            $HeadDetails = SQL_Select("Transaction", "HeadOfAccountID= '{$uniqHeadOfAccountId}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND '{$_REQUEST["ToDate"]}' order by Date");
+        } else {
+            // No filters - show all for this head
+            $HeadDetails = SQL_Select("Transaction", "HeadOfAccountID= '{$uniqHeadOfAccountId}' order by Date");
         }
 
         $headDetails = "";
@@ -65,7 +88,7 @@ if (count($JournalDetails) > 0) {
 
         foreach ($HeadDetails as $HeadDetail) {
 
-            $headName = $HeadDetail["HeadOfAccountName"];
+            $headName = SQL_Select("expensehead", "ExpenseHeadID='{$HeadDetail["HeadOfAccountID"]}'", "", true)["ExpenseHeadName"];
             $HeadOfAccountID = $HeadDetail["HeadOfAccountID"];
 
             $HeadInformations = SQL_Select("expensehead", "ExpenseHeadID='{$HeadOfAccountID}'");
@@ -73,13 +96,11 @@ if (count($JournalDetails) > 0) {
             $HeadType = $HeadInformations[0]["ExpenseHeadIsType"];
 
             if ($HeadType == 1) {
-//                Dr Formula
+                //                Dr Formula
                 $balance += $HeadDetail["dr"] - $HeadDetail["cr"];
-
             } else {
-//                Cr Formula
+                //                Cr Formula
                 $balance += $HeadDetail["cr"] - $HeadDetail["dr"];
-
             }
 
 
@@ -87,17 +108,84 @@ if (count($JournalDetails) > 0) {
 
             //print_r($GetCustRecord);
 
+            $GetCustRecordDR["VendorName"] = "";
 
-            $GetCustRecordDR["VendorName"]="";
-            if($HeadDetail["VoucherType"]=="CV")
-                $GetCustRecord = SQL_Select("crvoucher","CrVoucherID = '{$HeadDetail["VoucherNo"]}'","",true);
-            if($HeadDetail["VoucherType"]=="DV"){
-                $GetCustRecordDR = SQL_Select("drvoucher","VoucherNo = {$HeadDetail["VoucherNo"]}","",true);
-
-                if($HeadDetail["VendorID"]==0 and $HeadDetail["ContructorID"]==0)
-                    $GetCustRecordDR["VendorName"] = "Operational Cost";
+            // Handle CV voucher type
+            if ($HeadDetail["VoucherType"] == "CV") {
+                $GetCustRecord = SQL_Select("crvoucher", "CrVoucherID = '{$HeadDetail["VoucherNo"]}'", "", true);
+                $billNocr = isset($GetCustRecord["BillNo"]) ? $GetCustRecord["BillNo"] : "-";
             }
 
+            // Handle DV voucher type
+            if ($HeadDetail["VoucherType"] == "DV") {
+                $GetCustRecordDR = SQL_Select("drvoucher", "VoucherNo = '{$HeadDetail["VoucherNo"]}'", "", true);
+                $billNodr =  isset($GetCustRecordDR["BillNo"]) ? $GetCustRecordDR["BillNo"] : "-";
+
+                // Set vendor name for operational cost if no vendor or constructor
+                if (empty($HeadDetail["VendorID"]) && empty($HeadDetail["ContructorID"])) {
+                    $GetCustRecordDR["VendorName"] = "Operational Cost";
+                }
+            }
+
+            if ($HeadDetail["VoucherType"] == "JV") {
+                $GetCustRecordJV = SQL_Select("JournalVoucher", "VoucherNo = '{$HeadDetail["VoucherNo"]}'", "", true);
+                $billNojv =  isset($GetCustRecordJV["BillNo"]) ? $GetCustRecordJV["BillNo"] : "-";
+            }
+
+            // Build info for Vendor, Constructor, Customer
+            $CustomernewInfo = "";
+
+            // Customer info
+            if (!empty($HeadDetail["CustomerID"]) && $HeadDetail["CustomerID"] > 0) {
+                $CustomernewInfo .= "<b>Customer ID - {$HeadDetail["CustomerID"]}</b><br>";
+                $CustomerName = SQL_Select("customer", "CustomerID='{$HeadDetail["CustomerID"]}'", "", true);
+                $CustomernewInfo .= "<b>{$CustomerName["CustomerName"]}</b><br>";
+                $CustomernewInfo .= GetCustomerPhone($HeadDetail["CustomerID"]);
+            }
+
+            // Vendor info
+            if (!empty($HeadDetail["VendorID"]) && $HeadDetail["VendorID"] > 0) {
+                $CustomernewInfo .= "<b>Vendor ID - {$HeadDetail["VendorID"]}</b><br>";
+                $VendorName = SQL_Select("vendor", "VendorID='{$HeadDetail["VendorID"]}'", "", true);
+                $CustomernewInfo .= "<b>{$VendorName["VendorName"]}</b><br>";
+                // print_r($VendorName["VendorPhone"]);
+                $CustomernewInfo .= $VendorName["VendorPhone"];
+            }
+
+            // Constructor info
+            if (!empty($HeadDetail["ContructorID"]) && $HeadDetail["ContructorID"] > 0) {
+                $CustomernewInfo .= "<b>Constructor ID - {$HeadDetail["ContructorID"]}</b><br>";
+                $ContructorName = SQL_Select("contructor", "ContructorID='{$HeadDetail["ContructorID"]}'", "", true);
+                $CustomernewInfo .= "<b>{$ContructorName["VendorName"]}</b><br>";
+                $CustomernewInfo .= $ContructorName["VendorPhone"];
+            }
+
+            // If DV voucher with no vendor or constructor, override info
+            if (
+                $HeadDetail["VoucherType"] == "DV" &&
+                (empty($HeadDetail["VendorID"]) || $HeadDetail["VendorID"] == 0) &&
+                (empty($HeadDetail["ContructorID"]) || $HeadDetail["ContructorID"] == 0)
+            ) {
+                $CustomernewInfo = "Operational Cost / Others";
+            }
+
+            if ($HeadDetail["VoucherType"] == "DV") {
+                $billNo = $billNodr;
+            } elseif ($HeadDetail["VoucherType"] == "CV") {
+                $billNo = $billNocr;
+            } elseif ($HeadDetail["VoucherType"] == "JV") {
+                $billNo = $billNojv;
+            } 
+            else{
+                $billNo = "-";
+            }
+            
+
+
+
+
+
+            // CustomerID
 
             $headDetails .= '
 
@@ -106,6 +194,8 @@ if (count($JournalDetails) > 0) {
                     <td>' . HumanReadAbleDateFormat($HeadDetail["Date"]) . '</td>
                     
                     <td>
+                        ' . $CustomernewInfo . '
+                        <hr>
                         ' . $HeadDetail["Description"] . '
                     </td>
                     <td>' . $HeadDetail["BankCashName"] . '</td>
@@ -113,6 +203,7 @@ if (count($JournalDetails) > 0) {
                     <td>' . $HeadDetail["ChequeNumber"] . '</td>
                     <td>' . $HeadDetail["VoucherNo"] . '</td>
                     <td>' . $HeadDetail["VoucherType"] . '</td>
+                    <td>' . $billNo . '</td>
                     <td class="text-right">' . BangladeshiCurencyFormat($HeadDetail["dr"]) . '</td>
                     <td class="text-right">' . BangladeshiCurencyFormat($HeadDetail["cr"]) . '</td>
                     <td class="text-right">' . BangladeshiCurencyFormat($balance) . '</td>
@@ -123,7 +214,6 @@ if (count($JournalDetails) > 0) {
             ';
 
             $sl++;
-
         }
 
 
@@ -140,8 +230,9 @@ if (count($JournalDetails) > 0) {
                     <th scope="col">Name & Particulars</th>
                     <th scope="col">Mode of Payment</th>
                     <th scope="col">Cheque Number</th>
-                    <th scope="col">Voucher No</th>
+                    <th scope="col" style="width: 36px;">Voucher No</th>
                     <th scope="col">Type Of Voucher</th>
+                    <th scope="col">Bill No</th>
                     <th  class="text-right" scope="col">Dr.</th>
                     <th  class="text-right" scope="col">Cr.</th>
                     <th  class="text-right" scope="col">Balance</th>
@@ -163,12 +254,7 @@ if (count($JournalDetails) > 0) {
     
             </table>
         </div>';
-
-
-
     }
-
-
 } else {
 
     $emptyTh = '
@@ -179,7 +265,6 @@ if (count($JournalDetails) > 0) {
     
     
     ';
-
 }
 
 
@@ -217,7 +302,7 @@ $MainContent .= '
 <body>
 
 <div style="width: 95%; margin: auto">
-    <p style="font-size: 16px">Printing Date & Time: '.date('F j-y, h:i:sa').'</p>
+    <p style="font-size: 16px">Printing Date & Time: ' . date('F j-y, h:i:sa') . '</p>
 </div>
 
 <div style="width: 95%; margin: auto">
@@ -227,8 +312,8 @@ $MainContent .= '
             <img height="70px" src="./upload/' . $Settings["logo"] . '" alt="">
         </div>
         <div  class="col-md-9 text-center">
-            <h4 style="font-weight: bold">'.$Settings["CompanyName"].'</h4>
-            <p style="font-size: 18px;">'.$Settings["Address"].'</p>
+            <h4 style="font-weight: bold">' . $Settings["CompanyName"] . '</h4>
+            <p style="font-size: 18px;">' . $Settings["Address"] . '</p>
 
         </div>
 
@@ -268,6 +353,3 @@ $MainContent .= '
 
 
 ';
-
-?>
-

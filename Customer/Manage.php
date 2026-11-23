@@ -2,6 +2,7 @@
 	GetPermission("OptionCustomer");
 	
 	include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
+	require_once dirname(__FILE__) . '/../Custom/SecurityScope.php';
 
 	SetFormvariable("RecordShowFrom", 1);
     SetFormvariable("RecordShowUpTo", $Application["DatagridRowsDefault"]);
@@ -15,9 +16,13 @@
 	// Delete a data
 	if(isset($_GET["DeleteConfirm"]))SQL_Delete($Entity="{$Entity}", $Where="{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'");
 
-    $Where="CustomerID!=5";
-	if($_POST["FreeText"]!="")
-		$Where.=" and CustomerID!=5 and {$_REQUEST["SearchCombo"]} LIKE '%{$_POST["FreeText"]}%'";
+    $scopeWhere = SecurityScope::getCustomerWhereCondition();
+    $Where = "CustomerID != 5 AND " . $scopeWhere;
+	if(isset($_POST["FreeText"]) && trim($_POST["FreeText"]) != "") {
+		$text = addslashes(trim($_POST["FreeText"]));
+		$searchCol = !empty($_REQUEST["SearchCombo"]) ? addslashes($_REQUEST["SearchCombo"]) : "CustomerName";
+		$Where .= " AND ({$searchCol} LIKE '%{$text}%' OR CustomerName LIKE '%{$text}%' OR Phone LIKE '%{$text}%' OR CustomerNo LIKE '%{$text}%')";
+	}
 
 $MainContent .= '
 
@@ -41,10 +46,10 @@ $MainContent .= '
 	// DataGrid
 	$MainContent.= CTL_Datagrid(
 		$Entity,
-		$ColumnName=array( "Image" ,"CustomerID" ,"CustomerName" , "FathersOrHusbandName" , "Date" , "Phone" , "Whatsapp", "CustomerEmail" , "NID"),
-		$ColumnTitle=array( "Image","Customer ID","Customer Name","Father's Or Husband Name", "Birth Date" , "Phone", "Whatsapp" , "Customer Email" ,"NID"),
-		$ColumnAlign=array( "left","left","left","left", "left" , "left" , "left" , "left", "left" ),
-		$ColumnType=array( "imagelink","text","text","text", "text" , "text" , "email" , "text", "text" ),
+		$ColumnName=array( "Image" ,"CustomerID" ,"CustomerNo" ,"CustomerName" , "FathersOrHusbandName" , "BankAccount" , "Phone" , "Whatsapp" , "NID"),
+		$ColumnTitle=array( "Image","Customer ID","Customer No.","Customer Name","Father's Or Husband Name", "Bank Account" , "Phone", "Whatsapp" ,"NID"),
+		$ColumnAlign=array( "left","left","left","left","left", "left" , "left" , "left" , "left" ),
+		$ColumnType=array( "imagelink","text","text","text","text", "text" , "text" , "text", "text" ),
 		$Rows=SQL_Select($Entity="{$Entity}", $Where ,  $OrderBy="{$_REQUEST["SortBy"]} {$_REQUEST["SortType"]}", $SingleRow=false, $RecordShowFrom=$_REQUEST["RecordShowFrom"], $RecordShowUpTo=$Application["DatagridRowsDefault"], $Debug=false),
 		$SearchHTML="".CTL_InputText($Name="FreeText","","",26, $Class="DataGridSearchBox")." ",
 		$ActionLinks=true,

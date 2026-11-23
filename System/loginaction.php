@@ -76,7 +76,7 @@
                                 <h5 class="text-success mb-3">Welcome, <span class="fw-bold">'.htmlspecialchars($_SESSION["UserName"]).'</span>!</h5>
                                 <p class="lead mb-2">Thank you for returning.</p>
                                 <p>
-                                    <a href="'.ApplicationURL("ClientHome","Manage").'" class="btn btn-primary">
+                                    <a href="'.ApplicationURL("ClientHome","Dashboard&NoHeader&NoFooter").'" class="btn btn-primary">
                                         Proceed to Dashboard
                                     </a>
                                 </p>
@@ -89,7 +89,7 @@
                     </div>
                     <script>
                         setTimeout(function(){
-                            window.location.href="'.ApplicationURL("ClientHome","Manage").'";
+                            window.location.href="'.ApplicationURL("ClientHome","Dashboard&NoHeader&NoFooter").'";
                             }, 100);
                     </script>
                 

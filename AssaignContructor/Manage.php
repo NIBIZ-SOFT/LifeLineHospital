@@ -13,6 +13,10 @@
     $Where="ContructorID != ''";
 	if($_POST["FreeText"]!="")
 		$Where.=" and {$_REQUEST["SearchCombo"]} LIKE '%{$_POST["FreeText"]}%'";
+		
+		$MainContent .='            <a href="'.ApplicationURL("AssaignVendor","Manage").'" class="btn btn-success m-1">Assaign Vendor</a>
+		<a href="' . ApplicationURL("AssaignLandOwner", "Manage") . '" class="btn btn-success m-1">Assaign LandOwner</a>
+';
 
 	// DataGrid
 	$MainContent.= CTL_Datagrid(

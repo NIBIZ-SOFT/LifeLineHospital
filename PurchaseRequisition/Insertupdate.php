@@ -33,6 +33,41 @@ $itemsPHP = json_decode($TheEntityName["Items"]);
 
 
 
+/**
+ * Manually builds an Expense Head <select> dropdown, replacing GetExpenseID().
+ * Pulls rows from the "expensehead" table where ExpenseHeadIsStock = 1.
+ *
+ * NOTE: This assumes SQL_Select($Table, $Where, $OrderBy, $SingleRow) returns
+ * an array of associative row-arrays when $SingleRow = false, matching the
+ * usage pattern already seen above in this file. Adjust the column names
+ * (ExpenseHeadID / ExpenseHeadName) below if your actual schema differs.
+ */
+if (!function_exists("BuildExpenseHeadDropdown")) {
+    function BuildExpenseHeadDropdown($Name, $SelectedValue = "", $Class = "form-select", $PrependBlankOption = true, $ExtraAttr = "") {
+
+        $ExpenseHeadRows = SQL_Select("expensehead", "ExpenseHeadIsStock = 1", "ExpenseHeadName ASC", false);
+
+        $html = '<select name="' . $Name . '" class="' . $Class . '" ' . $ExtraAttr . '>';
+
+        if ($PrependBlankOption) {
+            $html .= '<option value="">-- Select Expense Head --</option>';
+        }
+
+        if (!empty($ExpenseHeadRows)) {
+            foreach ($ExpenseHeadRows as $Row) {
+                $OptionValue = $Row["ExpenseHeadID"];
+                $OptionLabel = htmlspecialchars($Row["ExpenseHeadName"]);
+                $Selected = ((string)$OptionValue === (string)$SelectedValue) ? "selected" : "";
+                $html .= '<option value="' . $OptionValue . '" ' . $Selected . '>' . $OptionLabel . '</option>';
+            }
+        }
+
+        $html .= '</select>';
+
+        return $html;
+    }
+}
+
 
 
 if ($TheEntityName["Confirm"] == "Confirm") {
@@ -81,7 +116,7 @@ if (!empty($itemsPHP)) {
             <div class="row mb-2">
                 <div class="col-md-12 col-12">
                     <label class="form-label fw-bold">Expense Name</label>
-                    ' . GetExpenseID("items[$indexItem][expenseHead]", $itemPHP->expenseHead, "", true, "form-select HeadOfAccaunt") . '
+                    ' . BuildExpenseHeadDropdown("items[$indexItem][expenseHead]", $itemPHP->expenseHead, "form-select HeadOfAccaunt", true) . '
                 </div>
             </div>
 
@@ -122,27 +157,27 @@ if (!empty($itemsPHP)) {
     <div class="row g-2">
         <div class="col-md-6 col-12 mb-2">
             <label class="form-label fw-bold">Expense Head</label>
-            ' . GetExpenseID($Name = "items[0][expenseHead]", $itemPHP->expenseHead, $Where = "", $PrependBlankOption = true, $Class = "form-select HeadOfAccaunt") . '
+            ' . BuildExpenseHeadDropdown("items[0][expenseHead]", isset($itemPHP->expenseHead) ? $itemPHP->expenseHead : "", "form-select HeadOfAccaunt", true) . '
         </div>
 
         <div class="col-md-3 col-6 mb-2">
             <label class="form-label">Qty</label>
-            <input type="number" name="items[0][requisitionQty]" value="' . $itemPHP->requisitionQty . '" placeholder="Qty" step="0.01" class="form-control" autocomplete="off" thisRequisition="true" required>
+            <input type="number" name="items[0][requisitionQty]" value="' . (isset($itemPHP->requisitionQty) ? $itemPHP->requisitionQty : "") . '" placeholder="Qty" step="0.01" class="form-control" autocomplete="off" thisRequisition="true" required>
         </div>
 
         <div class="col-md-3 col-6 mb-2">
             <label class="form-label">Rate</label>
-            <input type="number" name="items[0][requisitionRate]" value="' . $itemPHP->requisitionRate . '" placeholder="Rate" step="0.01" class="form-control" autocomplete="off" thisRequisitonRate="true" required>
+            <input type="number" name="items[0][requisitionRate]" value="' . (isset($itemPHP->requisitionRate) ? $itemPHP->requisitionRate : "") . '" placeholder="Rate" step="0.01" class="form-control" autocomplete="off" thisRequisitonRate="true" required>
         </div>
 
         <div class="col-md-3 col-6 mb-2">
             <label class="form-label">Amount</label>
-            <input type="text" name="items[0][requisitionAmount]" value="' . $itemPHP->requisitionAmount . '" placeholder="Amount" class="form-control totalRequisitonAmount" thisRequisitionTotal="true" required>
+            <input type="text" name="items[0][requisitionAmount]" value="' . (isset($itemPHP->requisitionAmount) ? $itemPHP->requisitionAmount : "0") . '" placeholder="Amount" class="form-control totalRequisitonAmount" thisRequisitionTotal="true" required>
         </div>
         
         <div class="col-md-3 col-6 mb-2">
             <label class="form-label">Description</label>
-            <input type="text" name="items[0][Description]" value="' . $itemPHP->Description . '" placeholder="Description" class="form-control" autocomplete="off">
+            <input type="text" name="items[0][Description]" value="' . (isset($itemPHP->Description) ? $itemPHP->Description : "") . '" placeholder="Description" class="form-control" autocomplete="off">
         </div>
         
         <div class="col-12 mt-2">
@@ -239,6 +274,15 @@ document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("requisitionForm");
     const itemsContainer = document.getElementById("purchaseRequisitionItems");
 
+    // Helper: treat a field as "filled" if it is a valid number, INCLUDING zero.
+    // Only empty string / non-numeric input counts as invalid.
+    function isValidNumber(value) {
+        if (value === null || value === undefined) return false;
+        const trimmed = String(value).trim();
+        if (trimmed === "") return false;
+        return !isNaN(parseFloat(trimmed)) && isFinite(trimmed);
+    }
+
     // Auto-update amount
     itemsContainer.addEventListener("input", function (e) {
         const target = e.target;
@@ -262,9 +306,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
             let isValid = true;
 
-            [head, qty, rate].forEach(input => {
+            // Expense head must be selected (not a number, keep as "must have a value").
+            head.classList.remove("is-invalid");
+            if (!head.value) {
+                head.classList.add("is-invalid");
+                isValid = false;
+            }
+
+            // Qty / Rate: zero IS a valid value now, only reject empty/non-numeric.
+            [qty, rate].forEach(input => {
                 input.classList.remove("is-invalid");
-                if (!input.value || parseFloat(input.value) <= 0) {
+                if (!isValidNumber(input.value)) {
                     input.classList.add("is-invalid");
                     isValid = false;
                 }
@@ -299,9 +351,9 @@ document.addEventListener("DOMContentLoaded", function () {
             isValid = false;
         }
 
-        // Check all amounts
+        // Check all amounts - zero is a VALID amount, only empty/non-numeric fails.
         document.querySelectorAll("input[thisRequisitionTotal=true]").forEach(input => {
-            if (!parseFloat(input.value)) {
+            if (!isValidNumber(input.value)) {
                 input.classList.add("is-invalid");
                 isValid = false;
             } else {
@@ -332,7 +384,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <div class="col-12">
                     <label class="form-label fw-bold">Expense Head</label>
                     
-                     ' . GetExpenseID($Name = "items[$"."{index}"."][expenseHead]", $itemPHP->expenseHead, $Where = "", $PrependBlankOption = true, $Class = "form-select HeadOfAccaunt") . '
+                     ' . BuildExpenseHeadDropdown("items[\" + index + \"][expenseHead]", "", "form-select HeadOfAccaunt", true) . '
                 </div>
 
                 <div class="col-3 col-md-3 mb-2">

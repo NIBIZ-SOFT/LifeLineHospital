@@ -1,5 +1,5 @@
 <?
-	include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
+include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
 
 
 //echo "<pre>";
@@ -7,67 +7,67 @@
 //die();
 
 
-    $UpdateMode=false;
-	if(!empty($_REQUEST[$Entity."ID"]))$UpdateMode=true;
+$UpdateMode = false;
+if (!empty($_REQUEST[$Entity . "ID"])) $UpdateMode = true;
 
-    $ErrorUserInput["_Error"]=false;
+$ErrorUserInput["_Error"] = false;
 
-	if(!$UpdateMode)$_REQUEST["{$Entity}ID"]=0;
-
-
-	//some change goes here
-	$TheEntityName=SQL_Select($Entity="{$Entity}", $Where="{$UniqueField} = '{$_POST["{$UniqueField}"]}' AND {$Entity}ID <> {$_REQUEST[$Entity."ID"]}");
+if (!$UpdateMode) $_REQUEST["{$Entity}ID"] = 0;
 
 
-	if(count($TheEntityName)>0){
-	    $ErrorUserInput["_Error"]=true;
-	    $ErrorUserInput["_Message"]="This Value Already Taken.";
-	}
-
-    if($ErrorUserInput["_Error"]){
-        include "./script/{$_REQUEST["Base"]}/Insertupdate.php";
-	}else{
-	    $Where="";
-	    if($UpdateMode)$Where="{$Entity}ID = {$_REQUEST[$Entity."ID"]}";
-
-		// give the data dase fields name and the post value name
-	    $TheEntityName=SQL_InsertUpdate(
-	        $Entity="purchaserequisition",
-			$TheEntityNameData=array(
-                                                                                              
-		"CategoryID"=>$_POST["CategoryID"],
-		"CategoryName"=>GetCategoryName($_POST["CategoryID"]),
-
-		"EmployeeID"=>$_POST["EmployeeID"],
-		"EmployeeName"=>GetEmployeeName($_POST["EmployeeID"]),
-
-		"Date"=>$_POST["Date"],
-
-        "RequiredDate"=>$_POST["RequiredDate"],
+//some change goes here
+$TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$UniqueField} = '{$_POST["{$UniqueField}"]}' AND {$Entity}ID <> {$_REQUEST[$Entity . "ID"]}");
 
 
-		"TotalRequisitionAmount"=>$_POST["TotalRequisitionAmount"],
+if (count($TheEntityName) > 0) {
+	$ErrorUserInput["_Error"] = true;
+	$ErrorUserInput["_Message"] = "This Value Already Taken.";
+}
 
-        "NB" => $_POST["NB"],
+if ($ErrorUserInput["_Error"]) {
+	include "./script/{$_REQUEST["Base"]}/Insertupdate.php";
+} else {
+	$Where = "";
+	if ($UpdateMode) $Where = "{$Entity}ID = {$_REQUEST[$Entity . "ID"]}";
+
+	// give the data dase fields name and the post value name
+	$TheEntityName = SQL_InsertUpdate(
+		$Entity = "purchaserequisition",
+		$TheEntityNameData = array(
+
+			"CategoryID" => $_POST["CategoryID"],
+			"CategoryName" => GetCategoryName($_POST["CategoryID"]),
+
+			"EmployeeID" => $_POST["EmployeeID"],
+			"EmployeeName" => GetEmployeeName($_POST["EmployeeID"]),
+
+			"Date" => $_POST["Date"],
+
+			"RequiredDate" => $_POST["RequiredDate"],
+			"Comments" => $_POST["Comments"],
+			"Contract" => $_POST["Contract"],
 
 
+			"TotalRequisitionAmount" => $_POST["TotalRequisitionAmount"],
+			"PurchaseRequisitionPurpose" => $_POST["PurchaseRequisitionPurpose"],
 
-		"Items"=>json_encode($_POST["items"]),
+			"NB" => $_POST["NB"],
 
-		        "PurchaseRequisitionIsActive"=>1,
-			),
-			$Where
-			);
+			"Items" => json_encode($_POST["items"]),
 
-	    $MainContent.="
-	        ".CTL_Window($Title="Application Setting Management", "The operation complete successfully and<br>
+			"PurchaseRequisitionIsActive" => 1,
+		),
+		$Where
+	);
+
+	$MainContent .= "
+	        " . CTL_Window($Title = "Application Setting Management", "The operation complete successfully and<br>
 			<br>
 			The $EntityCaptionLower information has been stored.<br>
 			<br>
-			Please click <a href=\"".ApplicationURL("{$_REQUEST["Base"]}","Manage")."\">here</a> to proceed.",300)."
+			Please click <a href=\"" . ApplicationURL("{$_REQUEST["Base"]}", "Manage") . "\">here</a> to proceed.", 300) . "
 	        <script language=\"JavaScript\" >
-	            window.location='".ApplicationURL("{$_REQUEST["Base"]}","Manage")."';
+	            window.location='" . ApplicationURL("{$_REQUEST["Base"]}", "Manage") . "';
 	        </script>
 		";
-	}
-?>
+}

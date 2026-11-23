@@ -68,13 +68,13 @@ $MainContent .= '
 
 		$Entity,
 
-		$ColumnName=array( "{$Entity}Name" ,"GLCode"  ,"Unit" , "IncomeExpenseTypeName", "{$Entity}IsType", "{$Entity}IsStock", "{$Entity}IsActive" ),
+		$ColumnName=array( "{$Entity}Name" ,"GLCode"  ,"Unit" , "IncomeExpenseTypeName", "{$Entity}CrIsType", "{$Entity}IsType", "{$Entity}IsStock", "{$Entity}IsActive" ),
 
-		$ColumnTitle=array( "Name" , "GL Code" , "Unit","Inc/ExpType",  "Dr?", "Stock?", "IsActive" ),
+		$ColumnTitle=array( "Chart of Accounts Name" , "GL Code" , "Unit","Sub Head", "Cr?", "Dr?", "Stock?", "IsActive" ),
 
-		$ColumnAlign=array( "left", "left", "left","left",  "left", "left", "left" ),
+		$ColumnAlign=array( "left", "left", "left","left",  "left", "left", "left", "left" ),
 
-		$ColumnType=array( "text","text","text","text", "yes/no", "yes/no", "yes/no"),
+		$ColumnType=array( "text","text","text","text", "yes/no/cr", "yes/no", "yes/no", "yes/no"),
 
 		$Rows=SQL_Select($Entity="{$Entity}", $Where,  $OrderBy="{$_REQUEST["SortBy"]} {$_REQUEST["SortType"]}", $SingleRow=false, $RecordShowFrom=$_REQUEST["RecordShowFrom"], $RecordShowUpTo=$Application["DatagridRowsDefault"], $Debug=false),
 

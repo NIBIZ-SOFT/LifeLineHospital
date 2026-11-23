@@ -73,6 +73,7 @@
 				"DeductionCharge"=>$_POST["DeductionCharge"],
 				"RefundAdditionalWorkCharge"=>$_POST["RefundAdditionalWorkCharge"],
 				"NetSalesPrice"=>$_POST["NetSalesPrice"],
+				"MonthlyTargetDeduction"=> (isset($_POST["MonthlyTargetDeduction"]) && $_POST["MonthlyTargetDeduction"] !== "") ? floatval($_POST["MonthlyTargetDeduction"]) : 1.00,
 				"Description"=>$_POST["Description"],
 				"ProductsImage"=>$_POST["ProductsImage"],
 				"BuildArea"=>$_POST["BuildArea"],

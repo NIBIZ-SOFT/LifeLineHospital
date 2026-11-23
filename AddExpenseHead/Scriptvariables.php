@@ -3,7 +3,7 @@
     $Entity="ExpenseHead";
     $EntityAlias="E";
     $EntityLower=strtolower($Entity);
-    $EntityCaption="Income/Expense Head List";
+    $EntityCaption="Chart of Accounts List";
     $EntityCaptionLower=strtolower($EntityCaption);
     $OrderByValue="Name";
 	// Check the value in the InsertUpdate Action Page for detect is the value is taken or not

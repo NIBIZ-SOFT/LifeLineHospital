@@ -1,0 +1,6 @@
+.DS_Store
+.ftpquota
+.ftp-deploy-sync-state.json
+Thumbs.db
+*.log
+error_log

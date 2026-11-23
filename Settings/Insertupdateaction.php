@@ -7,7 +7,8 @@
     $ErrorUserInput["_Error"]=false;
 
 	if(!$UpdateMode)$_REQUEST["{$Entity}ID"]=0;
-	//some change goes here
+
+	// Duplicate check on the unique field
 	$TheEntityName=SQL_Select($Entity="{$Entity}", $Where="{$UniqueField} = '{$_POST["{$UniqueField}"]}' AND {$Entity}ID <> {$_REQUEST[$Entity."ID"]}");
     if(count($TheEntityName)>0){
 	    $ErrorUserInput["_Error"]=true;
@@ -20,37 +21,34 @@
 	    $Where="";
 	    if($UpdateMode)$Where="{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'";
 
-        $_POST["logo"]	=ProcessUpload("logo", $Application["UploadPath"]);
-			
+        $_POST["logo"]=ProcessUpload("logo", $Application["UploadPath"]);
 
-		// give the data dase fields name and the post value name
+		// database field name => posted value
 	    $TheEntityName=SQL_InsertUpdate(
 	        $Entity="{$Entity}",
 			$TheEntityNameData=array(
-                                                                                              
-		"CompanyName"=>$_POST["CompanyName"],
-		"logo"=>$_POST["logo"],
-		"Address"=>$_POST["Address"],
-		"City"=>$_POST["City"],
-		"Zip"=>$_POST["Zip"],
-		"Country"=>$_POST["Country"],
-		"Phone"=>$_POST["Phone"],
-		"Email"=>$_POST["Email"],
-		"WebSite"=>$_POST["WebSite"],
-		"PaymentMethod"=>$_POST["PaymentMethod"],
-		"InvoicePrifix"=>$_POST["InvoicePrifix"],
-		"InvoiceTerms"=>$_POST["InvoiceTerms"],
-		"IsUseCompanyPad"=>$_POST["IsUseCompanyPad"],
-		
-		"LeadsStatus"=>$_POST["LeadsStatus"],
-		"LeadSource"=>$_POST["LeadSource"],
-		"Division"=>$_POST["Division"],
-		
-		
-		        "{$Entity}IsActive"=>$_POST["{$Entity}IsActive"],
+				"CompanyName"=>$_POST["CompanyName"],
+				"logo"=>$_POST["logo"],
+				"Address"=>$_POST["Address"],
+				"RegionalOffice"=>$_POST["RegionalOffice"],
+				"CorporateOffice"=>$_POST["CorporateOffice"],
+				"Phone"=>$_POST["Phone"],
+				"Email"=>$_POST["Email"],
+				"WebSite"=>$_POST["WebSite"],
+				"PaymentMethod"=>$_POST["PaymentMethod"],
+				"InvoicePrifix"=>$_POST["InvoicePrifix"],
+				"InvoiceTerms"=>$_POST["InvoiceTerms"],
+				"IsUseCompanyPad"=>$_POST["IsUseCompanyPad"],
+				"LeadsStatus"=>$_POST["LeadsStatus"],
+				"LeadSource"=>$_POST["LeadSource"],
+				"Division"=>$_POST["Division"],
+				"IsSendCrVoucherSMS"=>(isset($_POST["IsSendCrVoucherSMS"]) ? intval($_POST["IsSendCrVoucherSMS"]) : 1),
+				"SMSApiKey"=>(isset($_POST["SMSApiKey"]) ? trim($_POST["SMSApiKey"]) : "sms_ef9igTCZihIRnVRWna3rgHuKknDu4bDB"),
+				"CrVoucherSMSTemplate"=>(isset($_POST["CrVoucherSMSTemplate"]) ? $_POST["CrVoucherSMSTemplate"] : ""),
+				"{$Entity}IsActive"=>(isset($_POST["{$Entity}IsActive"]) ? $_POST["{$Entity}IsActive"] : 1),
 			),
 			$Where
-			);
+		);
 
 	    $MainContent.="
 	        ".CTL_Window($Title="Application Setting Management", "The operation complete successfully and<br>

@@ -39,7 +39,7 @@ $MainContent .= CTL_Datagrid(
     $ControlPanel = true,
     $EntityAlias = "" . $EntityCaption . "",
 
-    $AddButton = false,
+    $AddButton = true,
     $AdditionalLinkCaption = array("PRINT<br>"),
     $AdditionalLinkField = array("PurchaseID"),
     $AdditionalLink = array(ApplicationURL("Purchase", "report&NoHeader&NoFooter&ID="))

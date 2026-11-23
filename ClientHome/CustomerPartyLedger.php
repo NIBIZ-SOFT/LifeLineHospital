@@ -2,7 +2,6 @@
 
 //echo GetCustomerBalance("663");
 
-//n_bulk_sms($mobile_no="01969101010",$message="Hello This is Test");
 //if($_REQUEST["CustomerID"]=="") {
 //    echo '
 //        <script>

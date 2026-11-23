@@ -8,6 +8,11 @@
 
 
 
+// Initialize TheEntityName if not set
+if (!isset($TheEntityName)) {
+    $TheEntityName = array("CategoryID" => "");
+}
+
 $MainContent.='
 <div class="container-fluid">
     <div class="row">
@@ -17,19 +22,61 @@ $MainContent.='
     </div>
     
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-        <!-- Project Wise Ledger -->
+        <!-- Balance Sheet -->
         <div class="col">
             <div class="card shadow">
-                <div class="card-header text-center bg-success text-white">Project Wise</div>
+                <div class="card-header text-center bg-success text-white">Balance Sheet</div>
                 <div class="card-body">
                     <form method="POST" action="' .ApplicationURL("Transaction","BalanceSheet&NoHeader&NoFooter"). '">
                         <div class="mb-3">
-                            <label class="form-label">From Date</label>
+                            <label class="form-label">Project Name (Optional - Leave blank for all projects)</label>
+                            '.CCTL_ProductsCategory($Name = "CategoryID", $TheEntityName["CategoryID"], $Where = "", $PrependBlankOption = true).'
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">From Date (Optional - Leave blank for all data)</label>
                             <input type="date" class="form-control" name="FromDate" placeholder="YYYY-MM-DD">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">To Date</label>
+                            <label class="form-label">To Date (Optional - Leave blank for all data)</label>
                             <input type="date" class="form-control" name="ToDate" placeholder="YYYY-MM-DD">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="withPrevToDate" id="bs_withPrevToDate" value="1">
+                                <label class="form-check-label" for="bs_withPrevToDate">
+                                    Show Previous Period
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Show Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header text-center bg-success text-white">ProfitLoss</div>
+                <div class="card-body">
+                    <form method="POST" action="' .ApplicationURL("Transaction","ProfitLoss&NoHeader&NoFooter"). '">
+                        <div class="mb-3">
+                            <label class="form-label">Project Name (Optional - Leave blank for all projects)</label>
+                            '.CCTL_ProductsCategory($Name = "CategoryID", $TheEntityName["CategoryID"], $Where = "", $PrependBlankOption = true).'
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">From Date (Optional - Leave blank for all data)</label>
+                            <input type="date" class="form-control" name="FromDate" placeholder="YYYY-MM-DD">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">To Date (Optional - Leave blank for all data)</label>
+                            <input type="date" class="form-control" name="ToDate" placeholder="YYYY-MM-DD">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="withPrevToDate" id="pl_withPrevToDate" value="1">
+                                <label class="form-check-label" for="pl_withPrevToDate">
+                                    Show Previous Period
+                                </label>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Show Report</button>
                     </form>

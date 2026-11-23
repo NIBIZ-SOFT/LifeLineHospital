@@ -34,9 +34,12 @@
 				"Caption" => "Category",
 				"ControlHTML" => '<select name="Category" class="form-control" required>
 									<option value="">-- Select Category --</option>
-									<option value="Liabilities" '.($TheEntityName["Category"]=="Liabilities" ? "selected" : "").'>Liabilities</option>
-									<option value="Equity" '.($TheEntityName["Category"]=="Equity" ? "selected" : "").'>Equity</option>
+									<option value="LIABILITIES" '.($TheEntityName["Category"]=="LIABILITIES" ? "selected" : "").'>LIABILITIES</option>
+									<option value="EQUITY" '.($TheEntityName["Category"]=="EQUITY" ? "selected" : "").'>EQUITY</option>
 									<option value="ASSETS" '.($TheEntityName["Category"]=="ASSETS" ? "selected" : "").'>ASSETS</option>
+									<option value="INCOME" ' . ($TheEntityName["Category"] == "INCOME" ? "selected" : "") . '>INCOME</option>
+									<option value="EXPENSES" ' . ($TheEntityName["Category"] == "EXPENSES" ? "selected" : "") . '>EXPENSES</option>
+									
 								</select>'
 			);
 			

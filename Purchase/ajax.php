@@ -1,41 +1,91 @@
 <?php
 
-if (isset($_POST["id"])){
-    $id=$_POST["id"];
-    $purchaseItems=SQL_Select("Purchaserequisition where (CategoryID=$id && Confirm='Confirm')");
-    echo json_encode($purchaseItems);
+// if (isset($_POST["id"])) {
+//     $id = $_POST["id"];
+//     $purchaseItems = SQL_Select("Purchaserequisition", "CategoryID=$id AND Confirm='Confirm'");
 
+
+//     foreach ($purchaseItems as &$item) {
+
+//         $purchase = SQL_Select(
+//             "Purchase",
+//             "confirmRequisitonId=" . $item["PurchaseRequisitionID"] . " AND Confirm='Confirm'",
+//             "",
+//             true
+//         );
+
+//         $item["Purchased"] = !empty($purchase) ? 1 : 0;
+//     }
+//     print_r($purchaseItems);
+//     echo json_encode($purchaseItems);
+// }
+
+if (isset($_POST["id"])) {
+    $id = (int)$_POST["id"];
+
+    $purchaseItems = SQL_Select(
+        "Purchaserequisition",
+        "CategoryID=$id AND Confirm='Confirm'"
+    );
+
+    $options = '<option value="">-Select Confirm Order-</option>';
+
+    if (!empty($purchaseItems)) {
+
+        foreach ($purchaseItems as $item) {
+
+            $purchase = SQL_Select(
+                "Purchase",
+                "confirmRequisitonId=" . $item["PurchaseRequisitionID"] . " AND Confirm='Confirm'",
+                "",
+                true
+            );
+
+            if (!empty($purchase)) {
+                $options .= '<option value="' . $item["PurchaseRequisitionID"] . '" disabled>'
+                    . $item["RequisitionConfirmID"] . ' (Purchased)</option>';
+            } else {
+                $options .= '<option value="' . $item["PurchaseRequisitionID"] . '">'
+                    . $item["RequisitionConfirmID"] . '</option>';
+            }
+        }
+
+    } else {
+        $options = '<option value="">No Purchase order confirmed</option>';
+    }
+
+    echo $options;
+    exit;
 }
 
-if (isset( $_POST["categoryId"], $_POST["ConfirmId"] )){
+if (isset($_POST["categoryId"], $_POST["ConfirmId"])) {
 
-    $categoryId=$_POST["categoryId"];
-    $ConfirmId=$_POST["ConfirmId"];
+    $categoryId = $_POST["categoryId"];
+    $ConfirmId = $_POST["ConfirmId"];
 
-    $RequisitionConfirmItems=SQL_Select("Purchaserequisition where (CategoryID=$categoryId and PurchaseRequisitionID= $ConfirmId  and Confirm='Confirm')");
+    $RequisitionConfirmItems = SQL_Select("Purchaserequisition where (CategoryID=$categoryId and PurchaseRequisitionID= $ConfirmId  and Confirm='Confirm')");
 
 
-    $ExpenseHeadName=[];
-    $indexHead=0;
-    foreach ($RequisitionConfirmItems as $purchaseItem){
-        $OnlyItems=json_decode($purchaseItem["Items"]);
-        foreach ($OnlyItems as $onlyItem){
-            $ExpenseHeadName[$onlyItem->expenseHead]=GetExpenseHeadName($onlyItem->expenseHead);
+    $ExpenseHeadName = [];
+    $indexHead = 0;
+    foreach ($RequisitionConfirmItems as $purchaseItem) {
+        $OnlyItems = json_decode($purchaseItem["Items"]);
+        foreach ($OnlyItems as $onlyItem) {
+            $ExpenseHeadName[$onlyItem->expenseHead] = GetExpenseHeadName($onlyItem->expenseHead);
         }
     }
 
 
-    $ConfirmItemsRequisiton=SQL_Select("Purchaserequisition where (CategoryID=$categoryId  and Confirm='Confirm')");
+    $ConfirmItemsRequisiton = SQL_Select("Purchaserequisition where (CategoryID=$categoryId  and Confirm='Confirm')");
 
 
-//echo "<pre>";
+    //echo "<pre>";
     $confirmExpenseHead = [];
     foreach ($ConfirmItemsRequisiton as $requisitionConfirmItem) {
         $sss = json_decode($requisitionConfirmItem["Items"]);
         foreach ($sss as $ss) {
             $confirmExpenseHead[] = $ss->expenseHead;
         }
-
     }
 
     $TotalRequisitionQty = [];
@@ -54,9 +104,7 @@ if (isset( $_POST["categoryId"], $_POST["ConfirmId"] )){
             }
             $requisitionRate[$ss->expenseHead] = $ss->requisitionRate;
             $i++;
-
         }
-
     }
 
     $PurchaseConfirmItems = SQL_Select("Purchase where (CategoryID=$categoryId and confirmRequisitonId=$ConfirmId  and Confirm='Confirm')");
@@ -68,7 +116,6 @@ if (isset( $_POST["categoryId"], $_POST["ConfirmId"] )){
 
             $PurchaseconfirmExpenseHead[] = $purchasesConfirm->expenseHead;
         }
-
     }
 
     $TotalPurchaseQty = [];
@@ -80,44 +127,29 @@ if (isset( $_POST["categoryId"], $_POST["ConfirmId"] )){
 
         foreach ($PurchasesConfirms as $purchasesConfirm) {
             if ($PurchaseconfirmExpenseHead[$indexPurchase] == $purchasesConfirm->expenseHead) {
-                $TotalPurchaseQty[$purchasesConfirm->expenseHead]+=$purchasesConfirm->requisitionQty;
-            }else{
-                $TotalPurchaseQty[$purchasesConfirm->expenseHead]=$purchasesConfirm->requisitionQty;
+                $TotalPurchaseQty[$purchasesConfirm->expenseHead] += $purchasesConfirm->requisitionQty;
+            } else {
+                $TotalPurchaseQty[$purchasesConfirm->expenseHead] = $purchasesConfirm->requisitionQty;
             }
-            $PurchaseRequisitionRate[$purchasesConfirm->expenseHead]=$purchasesConfirm->requisitionRate;
+            $PurchaseRequisitionRate[$purchasesConfirm->expenseHead] = $purchasesConfirm->requisitionRate;
 
             $indexPurchase++;
-
         }
     }
 
 
-    $ExpenseHeadNamePacket=[$ExpenseHeadName];
+    $ExpenseHeadNamePacket = [$ExpenseHeadName];
 
 
-/*    Total confirm requisition  amount*/
+    /*    Total confirm requisition  amount*/
 
-    $confirmRequisitionItemsss=[$TotalRequisitionQty,$requisitionRate];
+    $confirmRequisitionItemsss = [$TotalRequisitionQty, $requisitionRate];
 
-/*    Total confirm Purchase   amount*/
+    /*    Total confirm Purchase   amount*/
 
-    $confirmPurchaseItemsssssss=[$TotalPurchaseQty,$PurchaseRequisitionRate];
+    $confirmPurchaseItemsssssss = [$TotalPurchaseQty, $PurchaseRequisitionRate];
 
-    $result=array_merge($RequisitionConfirmItems,$ExpenseHeadNamePacket,$confirmRequisitionItemsss,$confirmPurchaseItemsssssss);
+    $result = array_merge($RequisitionConfirmItems, $ExpenseHeadNamePacket, $confirmRequisitionItemsss, $confirmPurchaseItemsssssss);
 
     echo json_encode($result);
-
-
 }
-
-?>
-
-
-
-
-
-
-
-
-
-

@@ -8,8 +8,8 @@ if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"]) && !i
     $FormTitle = "Update $EntityCaption";
     $ButtonCaption = "Update";
 
-    $ActionURL = ApplicationURL("{$_REQUEST["Base"]}", "Insertupdateaction", $Entity . "ID={$_REQUEST[$Entity."ID"]}&" . $Entity . "UUID={$_REQUEST[$Entity."UUID"]}");
-    if ($UpdateMode && !isset($_POST["" . $Entity . "ID"])) $TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'", $OrderBy = "{$OrderByValue}", $SingleRow = true);
+    $ActionURL = ApplicationURL("{$_REQUEST["Base"]}", "Insertupdateaction", $Entity . "ID={$_REQUEST[$Entity . "ID"]}&" . $Entity . "UUID={$_REQUEST[$Entity . "UUID"]}");
+    if ($UpdateMode && !isset($_POST["" . $Entity . "ID"])) $TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$Entity}ID = {$_REQUEST[$Entity . "ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity . "UUID"]}'", $OrderBy = "{$OrderByValue}", $SingleRow = true);
 }
 
 $disabled = "";
@@ -17,12 +17,12 @@ $selectedField = "";
 $itemsHtmls = "";
 if (!empty($TheEntityName)) {
 
-    $disabled = "disabled";
+    $disabled = "readonly";
 
     $EditItems = json_decode($TheEntityName["Items"]);
 
-    $confirmRequisitonId = $TheEntityName["confirmRequisitonId"];
-    $confirmRequisitonName = $TheEntityName["confirmRequisitonName"];
+    $confirmRequisitonId = $TheEntityName["PurchaseRequisitionID"];
+    $confirmRequisitonName = $TheEntityName["RequisitionConfirmID"];
 
     $selectedField = '<option  value="' . $confirmRequisitonId . '" selected>' . $confirmRequisitonName . '</option>"';
 
@@ -63,9 +63,7 @@ if (!empty($TheEntityName)) {
     </div>
 </div>';
         $EditIndex++;
-
     }
-
 }
 
 
@@ -74,6 +72,16 @@ if ($TheEntityName["Confirm"] == "Confirm") {
 } else if ($TheEntityName["Confirm"] == "Not Confirm") {
     $notConfirm = "checked";
 }
+
+$VendorHead = SQL_Select("ExpenseHead");
+
+$VendorHeadName = "";
+$SelectedVendorHeadName = "";
+foreach ($VendorHead as $head) {
+    $SelectedVendorHeadName = ($TheEntityName["VendorHead"] == $head["ExpenseHeadID"]) ? "selected" : "";
+    $VendorHeadName .= '<option value="' . $head["ExpenseHeadID"] . '" ' . $SelectedVendorHeadName . '>' . $head["ExpenseHeadName"] . '</option>';
+}
+// print_r($TheEntityName["VendorHead"]);
 $MainContent .= '
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-primary text-white">
@@ -81,7 +89,7 @@ $MainContent .= '
     </div>
     
     <div class="card-body">
-        <form id="requisitionForm" action="' . ApplicationURL("Purchase", "Insertupdateaction") . '" method="post">
+        <form id="requisitionForm" action="' . ApplicationURL("Purchase", "Insertupdateaction") . '" method="post" enctype="multipart/form-data">
 
             <div class="row g-3">
                     <div class="col-md-6">
@@ -90,13 +98,24 @@ $MainContent .= '
                     <div class="col-md-6">
                         ' . CCTL_Vendor("VendorID", $TheEntityName["VendorID"], "", true) . '
                     </div>
-            
+
                     <div class="col-md-6">
                         <label class="form-label">Confirm Order</label>
-                        <select class="form-select" ' . $disabled . ' name="confirmRequisitonId" id="confirmRequisitonId">
+                        <select class="form-select" ' . $disabled . ' name="confirmRequisitonId" id="confirmRequisitonId" required>
                             <option value="">Select Confirmed Order</option>
                             ' . $selectedField . '
                         </select>
+                    </div>
+                    <input type="hidden" name="confirmRequisitonIdForEdit" value="' . $TheEntityName["confirmRequisitonName"] . '">
+                    <input type="hidden" name="PurchaseConfirmID" value="' . $TheEntityName["PurchaseConfirmID"] . '">
+            
+                    <div class="col-md-6">
+                        <label class="form-label">Vendor Head Of A/C</label>
+                        <select class="form-select" name="VendorHead" id="VendorHead" required>
+                            <option value="">Select Vendor Head</option>
+                            ' . $VendorHeadName . '
+                        </select>
+
                     </div>
             
                     <div class="col-md-6">
@@ -106,7 +125,7 @@ $MainContent .= '
             
                     <div class="col-md-6">
                         <label class="form-label">Issuing Date</label>
-                        <input class="form-control" value="' . $TheEntityName["IssuingDate"] . '" name="IssuingDate" type="date">
+                        <input class="form-control" value="' . $TheEntityName["IssuingDate"] . '" name="IssuingDate" type="date" required>
                     </div>
             
                     <div class="col-md-6">
@@ -134,7 +153,7 @@ $MainContent .= '
                         <input class="form-control" value="' . $TheEntityName["Note"] . '" name="Note" type="text">
                     </div>
             
-                    <div class="col-12">
+                    <div class="col-6">
                         <label class="form-label">Subject</label>
                         <input class="form-control" value="' . $TheEntityName["Subject"] . '" name="Subject" type="text">
                     </div>
@@ -151,7 +170,7 @@ $MainContent .= '
         
                     </div>
                     
-                    <h4>Total Purchase Amount:  ' . round($TheEntityName["PurchaseAmount"],2) . '</h4>
+                    <h4>Total Purchase Amount:  ' . round($TheEntityName["PurchaseAmount"], 2) . '</h4>
                     
                     <div class="col-md-6">
                         <label for="DateOfDelevery" class="form-label">Date of delevery: </label>
@@ -165,16 +184,21 @@ $MainContent .= '
                     <div class="col-md-6">
                         <label class="form-label d-block">Confirmation</label>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="Confirm" id="confirm" value="Confirm" '.$Confirm.'>
+                            <input class="form-check-input" type="radio" name="Confirm" id="confirm" value="Confirm" ' . $Confirm . '>
                             <label class="form-check-label" for="confirm">Confirm</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="Confirm" id="notConfirm" value="Not Confirm" '.$notConfirm .'>
+                            <input class="form-check-input" type="radio" name="Confirm" id="notConfirm" value="Not Confirm" ' . $notConfirm . '>
                             <label class="form-check-label" for="notConfirm">Not Confirm</label>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success w-100" >Add Purchase </button>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Image:</label><br>
+                        ' . CTL_ImageUpload("Image", $TheEntityName["Image"], true, "FormTextInput", 100, 0, true) . '
+                    </div>
+
+                    <button type="submit" onclick="alert(\'It Will Create Auto Journal Voucher & Vendor Assaign ?\')" class="btn btn-success w-100" >Add Purchase </button>
             </div>
         </form>
     </div>
@@ -185,42 +209,39 @@ $MainContent .= '
 ';
 $MainContent .= <<<SCRIPT
 <script>
+
 $(function() {
+  
     // When Category changes, update Confirm Requisition options
     $(document).on("change", "select[name=CategoryID]", function () {
-        const categoryId = $(this).val();
-        const \$confirmSelect = $("select[name=confirmRequisitonId]");
-        const \$itemsContainer = $("#purchaseRequisitionItems");
 
-        \$confirmSelect.html('<option value="">Loading...</option>');
-        \$itemsContainer.empty();
+    const categoryId = $(this).val();
+    const \$confirmSelect = $("select[name=confirmRequisitonId]");
+    const \$itemsContainer = $("#purchaseRequisitionItems");
 
-        if (categoryId && !isNaN(categoryId)) {
-            $.ajax({
-                type: "POST",
-                url: "index.php?Theme=default&Base=Purchase&Script=ajax&NoHeader&NoFooter",
-                dataType: "json",
-                data: { id: categoryId },
-                success: function (data) {
-                    let options = '<option value="">-Select Confirm Order-</option>';
-                    if (data.length > 0) {
-                        data.forEach(function (curr) {
-                            options += `<option value="\${curr.PurchaseRequisitionID}">\${curr.RequisitionConfirmID}</option>`;
-                        });
-                    } else {
-                        options = '<option value="">No Purchase order confirmed</option>';
-                    }
-                    \$confirmSelect.html(options);
-                },
-                error: function (err) {
-                    console.error("Error fetching confirm requisition:", err);
-                    \$confirmSelect.html('<option value="">Error loading</option>');
-                }
-            });
-        } else {
-            \$confirmSelect.html('<option value="">No Purchase order confirmed</option>');
-        }
-    });
+    \$confirmSelect.html('<option value="">Loading...</option>');
+    \$itemsContainer.empty();
+
+    if (categoryId && !isNaN(categoryId)) {
+
+        $.ajax({
+            type: "POST",
+            url: "index.php?Theme=default&Base=Purchase&Script=ajax&NoHeader&NoFooter",
+            data: { id: categoryId },
+            success: function (options) {
+                \$confirmSelect.html(options);
+            },
+            error: function (err) {
+                console.error(err);
+                \$confirmSelect.html('<option value="">Error loading</option>');
+            }
+        });
+
+    } else {
+        \$confirmSelect.html('<option value="">No Purchase order confirmed</option>');
+    }
+
+});
 
     // When Confirm Requisition is selected
     $(document).on("change", "select[name=confirmRequisitonId]", function () {
@@ -279,11 +300,11 @@ $(function() {
                                 </div>
                                 <div class="col-md-3 col-6">
                                     <label class="form-label">Rate</label>
-                                    <input type="text" name="items[\${index}][requisitionRate]" value="\${rate}" class="form-control" readonly thisRequisitonRate="true">
+                                    <input type="number" name="items[\${index}][requisitionRate]" value="\${rate}" class="form-control" readonly thisRequisitonRate="true">
                                 </div>
                                 <div class="col-md-6 col-12 mt-2">
                                     <label class="form-label">Amount</label>
-                                    <input type="text" name="items[\${index}][requisitionAmount]" value="\${newAmount.toFixed(2)}" class="form-control totalRequisitonAmount" readonly thisRequisitionTotal="true">
+                                    <input type="number" name="items[\${index}][requisitionAmount]" value="\${newAmount.toFixed(2)}" class="form-control totalRequisitonAmount" readonly thisRequisitionTotal="true">
                                 </div>
                             </div>
                         </div>`;
@@ -330,10 +351,3 @@ $(function() {
 
 </script>
 SCRIPT;
-
-?>
-
-
-
-
-

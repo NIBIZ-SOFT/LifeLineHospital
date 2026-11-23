@@ -22,12 +22,10 @@ if (($_SESSION["UserID"] == 107)) {
 } else {
 
     $htmlButton .= '
-        <a href="' . ApplicationURL("CrVoucher", "Manage") . '" class="btn btn-success m-1">Cr. Voucher</a> 
-        <a href="' . ApplicationURL("DrVoucher", "Manage") . '" class="btn btn-danger m-1">Dr. Voucher</a>
-        <a href="' . ApplicationURL("PurchasePayment", "Manage") . '" class="btn btn-danger m-1">Purchase Payment</a>
+        <a href="' . ApplicationURL("CrVoucher", "Manage") . '" class="btn btn-success m-1">Receive</a> 
+        <a href="' . ApplicationURL("DrVoucher", "Manage") . '" class="btn btn-danger m-1">Payment</a>
         <a href="index.php?Theme=default&Base=JournalVoucher&Script=Manage" class="btn btn-primary m-1">Journal Voucher</a>
         <a href="index.php?Theme=default&Base=ContraVoucher&Script=Manage" class="btn btn-warning m-1">Contra Voucher</a>
-        <a href="' . ApplicationURL("Transaction", "LedgerManage") . '" class="btn btn-info m-1">Ledger</a>
     ';
 
 
@@ -49,18 +47,9 @@ $MainContent .= '
 			<div class="d-flex flex-wrap gap-2 justify-content-start">
                 ' . $htmlButton . '
                 
-                    <a href="index.php?Theme=default&Base=Transaction&Script=BalanceSheetManage" class="btn btn-primary m-1">Balance Sheet</a>
-                    <a href="index.php?Theme=default&Base=Transaction&Script=ProfitAndLossAccountManage" class="btn btn-success m-1">Profit & Loss Account</a>
+
                 
-                    <a style=" display: none;" href="index.php?Theme=default&Base=Transaction&Script=CashFlowStatementManage" class="btn btn-info m-1">Cash Flow Statement</a>
-                    <a style="" href="index.php?Theme=default&Base=Transaction&Script=ReceiveAndPaymentManage" class="btn btn-warning m-1">Receive & Payment</a>
-                    <a style="" href="index.php?Theme=default&Base=Transaction&Script=TrialBalanceManage" class="btn btn-secondary m-1">Trial Balance</a>
-                    <a style="" href="' . ApplicationURL("Stock", "Manage") . '" class="btn btn-primary m-1">Stock Manage</a>
-                
-                    <a style=" display: none;" href="' . ApplicationURL("Transaction", "CostOfRevenueManage") . '" class="btn btn-outline-danger m-1">Cost Of Revenue</a>
-                    <a style=" display: none;" href="' . ApplicationURL("Transaction", "RetainedEarningsManage") . '" class="btn btn-outline-primary m-1">Retained Earnings</a>
-                    <a style=" display: none;" href="' . ApplicationURL("Transaction", "FixedAssetsScheduleManage") . '" class="btn btn-outline-info m-1">Fixed Assets Schedule</a>
-                    <a style=" display: none;" href="' . ApplicationURL("Transaction", "NotesManage") . '" class="btn btn-outline-secondary m-1">Notes</a>
+
             </div>
 
         </div>	

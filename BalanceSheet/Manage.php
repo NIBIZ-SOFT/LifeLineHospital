@@ -18,7 +18,7 @@
 	$MainContent.= CTL_Datagrid(
 		$Entity,
 		$ColumnName=array( "Name" , "Category"   ,"{$Entity}IsActive" ),
-		$ColumnTitle=array( "Name", "Category"   ,"IsActive" ),
+		$ColumnTitle=array( "Balance Sheet Particulers", "Category"   ,"IsActive" ),
 		$ColumnAlign=array( "left", "left"   , "left" ),
 		$ColumnType=array( "text", "text"   ,"yes/no"),
 		$Rows=SQL_Select($Entity="{$Entity}", $Where ,  $OrderBy="{$_REQUEST["SortBy"]} {$_REQUEST["SortType"]}", $SingleRow=false, $RecordShowFrom=$_REQUEST["RecordShowFrom"], $RecordShowUpTo=$Application["DatagridRowsDefault"], $Debug=false),

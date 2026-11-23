@@ -1,413 +1,293 @@
-
 <?php
-//$salesID = '205,20'; // SalesID values as a string
-//$tblsales = SQL_Select("sales WHERE SalesID IN ({$salesID})");
-//
-//echo "<pre>";
-//print_r($tblsales);
-//echo "</pre>";
+require_once dirname(__FILE__) . '/../SMS/sms.php';
 
-?>
+$toDate        = !empty($_POST['ToDate'])        ? $_POST['ToDate']        : date('Y-m-d');
+$today         = date('d');
+$project       = $_POST['CategoryID'];
+$SalerNameID   = !empty($_POST['SalerNameID'])   ? $_POST['SalerNameID']   : '';
+$CustomerGroup = !empty($_POST['CustomerGroup']) ? $_POST['CustomerGroup'] : '';
+$PName         = SQL_Select("category", "CategoryID=$project", "", true);
 
+// Fetch every SchedulePayment row whose date is on or before the selected date
+$ScheduleWhere = "Date <= '$toDate'";
+$GetScheduleData = SQL_Select("SchedulePayment", $ScheduleWhere);
 
-
-<?php
-$fromDate = $_REQUEST["FromDate"];
-$toDate = $_REQUEST["ToDate"];
-$Division = $_REQUEST['Division'];
-//$Division = 'SED';
-
-//$fromDate = "2024-01-01";
-//$toDate = "2029-07-01";
-$GetScheduleData =  SQL_Select("SchedulePayment","Date BETWEEN '{$fromDate}' and '{$toDate}' ");
-//$salesIDs = "201,209"; // The list of SalesIDs as a string
-//$GetScheduleData = SQL_Select("SchedulePayment", "SalesID IN ({$salesIDs}) AND Date BETWEEN '{$fromDate}' AND '{$toDate}'");
-
-$uniqueSalesIDs = [];
-
-
+$uniqueSalesIDs                 = [];
+$cumulativeAllPendingAmount     = 0;
+$cumulativeTotalReceivedAmount  = 0;
+$cumulativeTotalPenalty         = 0;
+$cumulativeTotalDueWithPenalty  = 0;
+$cumulativeBalanceDue           = 0; // Fixed: Track cumulative Balance Due
+$sl                             = 1;
+$ThisMonthDue                   = 0;
+$TotalReceivedAmount            = 0;
+$NetSalesPrice                  = 0;
+$totalDue                       = 0;
+$totalPending                   = 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Report</title>
+    <title>Payment Report Of <?php echo $PName['Name']; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none; }
+            @page { size: landscape; }
+            body { font-size: 12px; }
+        }
+    </style>
 </head>
-<hr style="">
-<div style="margin-left: 20px;margin-right: 20px" class=" mt-3">
-    <div class="" style="float: left">
-        <p>Date Of Printing : <?= date('F j, Y, h:i:sa') ?></p>
-    </div>
-    <div class="" style="float: right">
-        <p>From <?= date('F j, Y', strtotime($fromDate)) ?> - To <?= date('F j, Y', strtotime($toDate)) ?></p>
-    </div>
-</div>
-
 <body>
-<div style="margin-left: 20px;margin-right: 20px;" class=" mt-5">
+<div class="mt-4" style="margin: 0 auto; width: 95%;">
+    <div class="d-flex justify-content-between">
+        <p><strong>Date Of Printing:</strong> <?= date('F j, Y, h:i:sa') ?></p>
+        <p><strong>As Of:</strong> <?= date('F j, Y', strtotime($toDate)) ?></p>
+    </div>
 
-    <h2 class="text-center">EMI Pending Payment's of <?=($Division == null) ? "All Division" : $_REQUEST['Division'];?>
-        <br>
-        <hr>
+    <h2 class="text-center">EMI Unpaid Schedule Report — <?php echo $PName['Name']; ?></h2>
+    <hr>
 
-    </h2>
+    <div class="no-print">
+        <button class="btn btn-info"    onclick="exportToCSV()">Export to CSV</button>
+        <button class="btn btn-success" onclick="exportToExcel()">Export to Excel</button>
+        <button onclick="window.print()" class="btn btn-primary">Print</button>
+    </div>
 
-
-
-    <h4>Pending Payments - <?=($Division == null) ? "All Division" : $_REQUEST['Division'];?></h4>
-    <table class="table table-bordered">
+    <table id="myTable" class="mt-4 table table-hover table-sm table-bordered">
         <thead>
-        <tr>
-            <th>SL.</th>
-            <th>Sale ID.</th>
-            <th>Customer Name</th>
-            <th>Saller Name</th>
-            <th>Term</th>
-            <th>Due Amount (Tk)</th>
-            <!--            <th>Cumulative Due <br> Amount (Tk)</th>-->
-            <th>Due Date</th>
-            <!--            <th>Received Amount (Tk)</th>-->
-            <!--            <th>Pending Amount (Tk)</th>-->
-            <!--            <th>Cumulative Pending <br> Amount (Tk)</th>-->
-
-        </tr>
+            <tr style="text-align:center; vertical-align:middle;">
+                <th>SL.</th>
+                <th>Customer Name</th>
+                <th>Phone</th>
+                <th>Flat Type</th>
+                <th>Sales ID</th>
+                <th>Seller Name</th>
+                <th>Last Unpaid Term</th>
+                <th>Total Scheduled Due (Tk)</th>
+                <th>Total Received (Tk)</th>
+                <th>Total Pending (Tk)</th>
+                <th>Total Penalty (Tk)</th>
+                <th>Total Due Incl. Penalty (Tk)</th>
+                <th>Net Sales Price (Tk)</th>
+                <th>Balance Due (Tk)</th>
+                <th>Last Due Date</th>
+            </tr>
         </thead>
         <tbody>
         <?php
-        $sl = 1;
-        $cumulativeAllPendingAmount = 0;
         foreach ($GetScheduleData as $GetScheduleDataRow) {
             $salesID = $GetScheduleDataRow['SalesID'];
-            if (!in_array($salesID, $uniqueSalesIDs)) {
-                $uniqueSalesIDs[] = $salesID;
 
+            if (empty($salesID)) continue;
 
-                //$salesID = 127;           // SalesID
-                //        $salesID=[205,20];
-                $tblsales = SQL_Select("sales WHERE SalesID IN ({$salesID})");
+            if (in_array($salesID, $uniqueSalesIDs)) continue;
+            $uniqueSalesIDs[] = $salesID;
 
+            $tblsales = SQL_Select("sales", "SalesID = {$salesID}");
+            if (empty($tblsales)) continue;
+            if ($tblsales[0]['ProjectID'] != $project) continue;
+            if ($SalerNameID !== '' && $tblsales[0]['SellerID'] != $SalerNameID) continue;
 
-                //        echo "<pre>";
-                //        print_r($tblsales);
-                //        echo "</pre>";
+            $customerPhone = $tblsales[0]['CustomerPhone'];
+            $customerName  = $tblsales[0]['CustomerName'];
+            $sellerName    = $tblsales[0]['SellerName'];
 
+            $Customer = SQL_Select("customer", "CustomerID = {$tblsales[0]['CustomerID']}");
+            if ($CustomerGroup !== '' && (empty($Customer) || $Customer[0]['CustomerGroup'] != $CustomerGroup)) continue;
 
-                $pendingQuery = "
-                            SELECT 
-                                SP.SchedulePaymentID,
-                                SP.SalesID,
-                                SP.Title AS InstallmentTerm,
-                                SP.PayAbleAmount AS DueAmount,
-                                SP.Date AS DueDate,
-                                IFNULL(SUM(ASP.ActualReceiveAmount), 0) AS TotalReceivedAmount,
-                                (SP.PayAbleAmount - IFNULL(SUM(ASP.ActualReceiveAmount), 0)) AS PendingAmount
-                            FROM 
-                                tblschedulepayment SP
-                            LEFT JOIN 
-                                tblactualsalsepayment ASP ON SP.SalesID = ASP.SalesID AND SP.Title = ASP.Term
-                            WHERE 
-                                SP.Date BETWEEN '$fromDate' AND '$toDate' 
-                                AND SP.SalesID = $salesID
-                            GROUP BY 
-                                SP.SalesID, SP.Title, SP.SchedulePaymentID
-                            HAVING 
-                                PendingAmount > 0
-                            ORDER BY 
-                                SP.Date ASC;
-                        ";
-
-
-                $pendingResult = mysql_query($pendingQuery);
-
-                if (!$pendingResult) {
-                    die("Query failed: " . mysql_error());
+            // Resolve flat type (supports comma-separated ProductIDs)
+            $FlatType  = '';
+            $productIDs = explode(",", $tblsales[0]['ProductID']);
+            foreach ($productIDs as $pid) {
+                $pid = (int)trim($pid);
+                if ($pid <= 0) continue;
+                $ProductsInfo = SQL_Select("products", "ProductsID = {$pid}");
+                if (!empty($ProductsInfo)) {
+                    $FlatType = $ProductsInfo[0]['FlatType'];
                 }
+            }
 
+            // ==========================================
+            // PENALTY CALCULATION FOR THIS SALE
+            // ==========================================
+            $penaltyRate  = isset($tblsales[0]["PenaltyPercentage"]) ? floatval($tblsales[0]["PenaltyPercentage"]) : 0;
+            $penaltyGrace = isset($tblsales[0]["PenaltyGraceDays"]) ? intval($tblsales[0]["PenaltyGraceDays"]) : 0;
+            $saleTotalPenalty = 0;
 
-                $receivedQuery = "
-                            SELECT 
-                                ASP.ActualSalsePaymentID,
-                                ASP.SalesID,
-                                ASP.Term,
-                                ASP.ReceiveAmount,
-                                ASP.Adjustment,
-                                ASP.ActualReceiveAmount,
-                                ASP.DateOfCollection,
-                                ASP.MRRNO,
-                                ASP.ModeOfPayment,
-                                ASP.ChequeNo,
-                                ASP.BankName,
-                                ASP.Remark
-                            FROM 
-                                tblactualsalsepayment ASP
-                            WHERE 
-                                ASP.SalesID = $salesID
-                                AND ASP.DateOfCollection BETWEEN '$fromDate' AND '$toDate'
-                            ORDER BY 
-                                ASP.DateOfCollection ASC;
-                        ";
-                $receivedResult = mysql_query($receivedQuery);
+            if ($penaltyRate > 0) {
+                $allSaleSchedules = SQL_Select("SchedulePayment", "SalesID = {$salesID} AND Date <= '$toDate'");
+                $toDateTimestamp = strtotime($toDate);
 
-                if (!$receivedResult) {
-                    die("Query failed: " . mysql_error());
-                }
+                if (!empty($allSaleSchedules)) {
+                    foreach ($allSaleSchedules as $sched) {
+                        $isWaived = isset($sched["IsPenaltyWaived"]) ? (int)$sched["IsPenaltyWaived"] : 0;
+                        if ($isWaived == 1) continue; // Skip waived penalties
 
-                ?>
+                        $dueDateStr = $sched["Date"];
+                        $dueDateTimestamp = strtotime($dueDateStr);
+                        $penaltyStartTimestamp = strtotime("+{$penaltyGrace} days", $dueDateTimestamp);
 
+                        // Freeze date logic
+                        $rawPayDate = isset($sched["PaymentDate"]) ? trim($sched["PaymentDate"]) : "";
+                        if (!empty($rawPayDate) && $rawPayDate != "0000-00-00 00:00:00" && $rawPayDate != "NULL") {
+                            $calcEndTimestamp = strtotime(date("Y-m-d", strtotime($rawPayDate)));
+                        } else {
+                            $calcEndTimestamp = $toDateTimestamp;
+                        }
 
-                <?php
+                        if ($calcEndTimestamp > $penaltyStartTimestamp) {
+                            $daysOverdue = floor(($calcEndTimestamp - $penaltyStartTimestamp) / (60 * 60 * 24));
+                            $payableAmt  = floatval($sched["PayAbleAmount"]);
 
-                $cumulativeDueAmount = 0;
-                $cumulativePendingAmount = 0;
-                while ($row = mysql_fetch_assoc($pendingResult)) {
-// Some Time Table Sale's id null but tbl tblschedulepayment sale's id avalable
-
-                    if ($Division==null && $tblsales[0]['SalesID']==$row['SalesID']){
-                                    echo "<tr>
-                            <td>{$sl}</td>
-                            <td>{$tblsales[0]['SalesID']}</td>
-                            <th style='font-weight: normal;'>{$tblsales[0]['CustomerID']} - {$tblsales[0]['CustomerName']}</th>
-                            <th style='font-weight: normal;'>{$tblsales[0]['SellerID']} - {$tblsales[0]['SellerName']}</th>
-                            <td>{$row['InstallmentTerm']}</td>
-                            <td>".BangladeshiCurencyFormat($row['DueAmount'])."</td>
-            
-                            <td>{$row['DueDate']}</td>
-            
-                            
-                          </tr>";
-                                    $sl++;
-                                    $cumulativeDueAmount += $row['DueAmount'];
-                                    $cumulativePendingAmount += $row['PendingAmount'];
-                                    $cumulativeAllPendingAmount+=$cumulativeDueAmount;
-                    }else{
-                        if($tblsales[0]['SalesID']==$row['SalesID']&& $tblsales[0]['Division']==$Division){
-                                    echo "<tr>
-                                        <td>{$sl}</td>
-                                        <td>{$tblsales[0]['SalesID']}</td>
-                                        <th style='font-weight: normal;'>{$tblsales[0]['CustomerID']} - {$tblsales[0]['CustomerName']}</th>
-                                        <th style='font-weight: normal;'>{$tblsales[0]['SellerID']} - {$tblsales[0]['SellerName']}</th>
-                                        <td>{$row['InstallmentTerm']}</td>
-                                        <td>".BangladeshiCurencyFormat($row['DueAmount'])."</td>
-                        
-                                        <td>{$row['DueDate']}</td>
-                        
-                                        
-                                      </tr>";
-                                    $sl++;
-                                    $cumulativeDueAmount += $row['DueAmount'];
-                                    $cumulativePendingAmount += $row['PendingAmount'];
-                                    $cumulativeAllPendingAmount+=$cumulativeDueAmount;
+                            if ($daysOverdue > 0 && $payableAmt > 0) {
+                                $dailyPenalty = $payableAmt * ($penaltyRate / 100);
+                                $saleTotalPenalty += ($dailyPenalty * $daysOverdue);
+                            }
                         }
                     }
-                    mysql_free_result($pendingResult);
-                    //end $pendingResult
                 }
-                ?>
-
-                <?php
-//end $GetScheduleData
             }
+
+
+            $pendingQuery = "
+                SELECT
+                    SP.SalesID,
+                    P.NetSalesPrice,
+                    MAX(CASE WHEN SP.Date <= '$toDate' THEN SP.Date ELSE NULL END) AS LastDueDate,
+
+                    (
+                        SELECT SP2.Title
+                        FROM tblschedulepayment SP2
+                        WHERE SP2.SalesID = SP.SalesID
+                          AND SP2.Date <= '$toDate'
+                          AND (
+                              SELECT IFNULL(SUM(SP_sub.PayAbleAmount), 0)
+                              FROM tblschedulepayment SP_sub
+                              WHERE SP_sub.SalesID = SP2.SalesID
+                                AND SP_sub.Date <= SP2.Date
+                          ) > (
+                              SELECT IFNULL(SUM(ASP_sub.ActualReceiveAmount), 0)
+                              FROM tblactualsalsepayment ASP_sub
+                              WHERE ASP_sub.SalesID = SP2.SalesID
+                          )
+                        ORDER BY SP2.Date DESC
+                        LIMIT 1
+                    ) AS LastUnpaidTerm,
+
+                    SUM(CASE WHEN SP.Date <= '$toDate' THEN SP.PayAbleAmount ELSE 0 END)
+                        AS DueAmount,
+
+                    IFNULL(SUM(ASP.ReceivedForTerm), 0)
+                        AS TotalReceived,
+
+                    SUM(CASE WHEN SP.Date <= '$toDate' THEN SP.PayAbleAmount ELSE 0 END)
+                    - IFNULL(SUM(ASP.ReceivedForTerm), 0)
+                        AS PendingAmount,
+
+                    P.NetSalesPrice - IFNULL(SUM(ASP.ReceivedForTerm), 0)
+                        AS BalanceDue
+
+                FROM tblschedulepayment SP
+                LEFT JOIN (
+                    SELECT SalesID, Term, SUM(ActualReceiveAmount) AS ReceivedForTerm
+                    FROM tblactualsalsepayment
+                    GROUP BY SalesID, Term
+                ) ASP
+                    ON SP.SalesID = ASP.SalesID AND SP.Title = ASP.Term
+                INNER JOIN tblsales S   ON SP.SalesID  = S.SalesID
+                INNER JOIN tblproducts P ON S.ProductID = P.ProductsID
+                WHERE SP.SalesID = $salesID
+                GROUP BY SP.SalesID, P.NetSalesPrice
+                HAVING
+                    SUM(CASE WHEN SP.Date <= '$toDate' THEN SP.PayAbleAmount ELSE 0 END)
+                    > IFNULL(SUM(ASP.ReceivedForTerm), 0)
+            ";
+
+            $pendingResult = mysql_query($pendingQuery);
+            if (!$pendingResult) {
+                die("Query failed: " . mysql_error());
+            }
+
+            while ($row = mysql_fetch_assoc($pendingResult)) {
+
+                $rowStyle = "text-align:center;";
+                if ($row['TotalReceived'] > 0 && $row['PendingAmount'] == 0) {
+                    $rowStyle = "background-color:rgb(8,255,65); text-align:center;";
+                } elseif ($row['TotalReceived'] > 0) {
+                    $rowStyle = "background-color:rgb(212,117,22); text-align:center;";
+                }
+
+                $totalDueWithPenalty = $row['PendingAmount'] + $saleTotalPenalty;
+
+                echo "<tr>
+                    <td style='text-align:center;'>{$sl}</td>
+                    <td>CID:{$tblsales[0]['CustomerID']} - {$customerName}</td>
+                    <td>{$Customer[0]['Phone']}</td>
+                    <td style='text-align:center;'>{$FlatType}</td>
+                    <td style='text-align:center;'>{$salesID}</td>
+                    <td>ID:{$tblsales[0]['SellerID']} - {$sellerName}</td>
+                    <td style='text-align:center;'>{$row['LastUnpaidTerm']}</td>
+                    <td style='text-align:center; width:115px;'>" . BangladeshiCurencyFormat($row['DueAmount'])     . "</td>
+                    <td style='{$rowStyle} width:115px;'>"          . BangladeshiCurencyFormat($row['TotalReceived'])  . "</td>
+                    <td style='text-align:center; width:115px;'>" . BangladeshiCurencyFormat($row['PendingAmount']) . "</td>
+                    <td style='text-align:center; width:115px; color:red; font-weight:bold;'>" . BangladeshiCurencyFormat($saleTotalPenalty) . "</td>
+                    <td style='text-align:center; width:115px; color:red; font-weight:bold;'>" . BangladeshiCurencyFormat($totalDueWithPenalty) . "</td>
+                    <td style='text-align:center; width:115px;'>" . BangladeshiCurencyFormat($row['NetSalesPrice']) . "</td>
+                    <td style='text-align:center; width:115px;'>" . BangladeshiCurencyFormat($row['BalanceDue'])    . "</td>
+                    <td style='text-align:center; width:115px;'>{$row['LastDueDate']}</td>
+                </tr>";
+
+                $sl++;
+                $totalDue                      += $row['DueAmount'];
+                $TotalReceivedAmount           += $row['TotalReceived'];
+                $totalPending                  += $row['PendingAmount'];
+                $NetSalesPrice                 += $row['NetSalesPrice'];
+                $cumulativeAllPendingAmount    += $row['PendingAmount'];
+                $cumulativeTotalReceivedAmount += $row['TotalReceived'];
+                $cumulativeTotalPenalty        += $saleTotalPenalty;
+                $cumulativeTotalDueWithPenalty += $totalDueWithPenalty;
+                $cumulativeBalanceDue          += $row['BalanceDue']; // Accumulated Balance Due correctly
+            }
+
+            if ($totalPending > 0) {
+                $formattedPending = BangladeshiCurencyFormat($totalPending);
+                $smsBody = "সম্মানিত গ্রাহক, আসসালামু আলাইকুম, আপনার মোট বকেয়া- {$formattedPending}/= টাকা, যা যথা সময়ে পরিশোধ করার জন্য অনুরোধ করা হল। (যদি ইতোমধ্যে পরিশোধ করে থাকেন তাহলে এই এসএমএস টি উপেক্ষা করুন।) ধন্যবাদান্তে";
+                if ($today == '05' || $today == '22') {
+                    sendSMS($customerPhone, $smsBody);
+                }
+            }
+
+            mysql_free_result($pendingResult);
         }
-
         ?>
-        <tr>
-            <td style="text-align: right; font-weight: bold" colspan="5">Total Due Amount</td>
-            <td style="font-weight: bold" colspan="2"><?=BangladeshiCurencyFormat($cumulativeAllPendingAmount)?>/-</td>
 
+        <tr class="fw-bold">
+            <td colspan="7" class="text-end">Total =</td>
+            <td style="text-align:center;"><?= BangladeshiCurencyFormat($totalDue)                      ?></td>
+            <td style="text-align:center;"><?= BangladeshiCurencyFormat($cumulativeTotalReceivedAmount) ?></td>
+            <td style="text-align:center;"><?= BangladeshiCurencyFormat($cumulativeAllPendingAmount)    ?></td>
+            <td style="text-align:center; color:red;"><?= BangladeshiCurencyFormat($cumulativeTotalPenalty) ?></td>
+            <td style="text-align:center; color:red;"><?= BangladeshiCurencyFormat($cumulativeTotalDueWithPenalty) ?></td>
+            <td style="text-align:center;"><?= BangladeshiCurencyFormat($NetSalesPrice)                 ?></td>
+            <td style="text-align:center;"><?= BangladeshiCurencyFormat($cumulativeBalanceDue)          ?></td>
+            <td></td>
         </tr>
         </tbody>
     </table>
-
-    <!--            <h4>Received Payments</h4>-->
-    <!--            <table class="table table-bordered">-->
-    <!--                <thead>-->
-    <!--                <tr>-->
-    <!--                    <th>SL.</th>-->
-    <!--                    <th>Term</th>-->
-    <!--                    <th>Received Amount (Tk)</th>-->
-    <!--                    <th>Adjustment (Tk)</th>-->
-    <!--                    <th>Actual Amount (Tk)</th>-->
-    <!--                    <th>Date of Collection</th>-->
-    <!--                    <th>MRR NO</th>-->
-    <!--                    <th>Mode of Payment</th>-->
-    <!--                    <th>Chq No</th>-->
-    <!--                    <th>Bank Name</th>-->
-    <!--                    <th>Remarks</th>-->
-    <!--                </tr>-->
-    <!--                </thead>-->
-    <!--                <tbody>-->
-    <!--                --><?php
-    //                $sl = 1;
-    //
-    //                while ($row = mysql_fetch_assoc($receivedResult)) {
-    //                    echo "<tr>
-    //                                <td>{$sl}</td>
-    //                                <td>{$row['Term']}</td>
-    //                                <td>{$row['ReceiveAmount']}</td>
-    //                                <td>{$row['Adjustment']}</td>
-    //                                <td>{$row['ActualReceiveAmount']}</td>
-    //                                <td>{$row['DateOfCollection']}</td>
-    //                                <td>{$row['MRRNO']}</td>
-    //                                <td>{$row['ModeOfPayment']}</td>
-    //                                <td>{$row['ChequeNo']}</td>
-    //                                <td>{$row['BankName']}</td>
-    //                                <td>{$row['Remark']}</td>
-    //                              </tr>";
-    //                    $sl++;
-    //                }
-    //                mysql_free_result($receivedResult);
-    //
-    //                ?>
-    <!--                </tbody>-->
-    <!--            </table>-->
-
-    <!--            <h4>Summary</h4>-->
-    <!--            <table class="table table-bordered">-->
-    <!--                <thead>-->
-    <!--                <tr>-->
-    <!--                    <th>Total Receivable Amount (Tk)</th>-->
-    <!--                    <th>Total Actual Received Amount (Tk)</th>-->
-    <!--                    <th>Total Due Amount (Tk)</th>-->
-    <!--                </tr>-->
-    <!--                </thead>-->
-    <!--                <tbody>-->
-    <!--                <tr>-->
-    <!--                    <td>-->
-    <!--                        --><?php
-    //                        $TotalPayAbleAmountQ = "SELECT SUM(PayAbleAmount) FROM tblschedulepayment WHERE SalesID = '$salesID'";
-    //                        $TotalPayAbleAmount = mysql_query($TotalPayAbleAmountQ);
-    //                        if (!$TotalPayAbleAmount) {
-    //                            die("Query failed: " . mysql_error());
-    //                        }
-    //                        $TotalPayAbleAmountRow = mysql_fetch_assoc($TotalPayAbleAmount);
-    //                        echo $TotalPayAbleAmountRow['SUM(PayAbleAmount)'];
-    //                        ?>
-    <!--                    </td>-->
-    <!--                    <td>-->
-    <!--                        --><?php
-    //                        $TotalActualReceiveAmountQ = "SELECT SUM(ActualReceiveAmount) FROM tblactualsalsepayment WHERE SalesID = '$salesID'";
-    //                        $TotalActualReceiveAmount = mysql_query($TotalActualReceiveAmountQ);
-    //                        if (!$TotalActualReceiveAmount) {
-    //                            die("Query failed: " . mysql_error());
-    //                        }
-    //                        $TotalActualReceiveAmountRow = mysql_fetch_assoc($TotalActualReceiveAmount);
-    //                        echo $TotalActualReceiveAmountRow['SUM(ActualReceiveAmount)'];
-    //                        ?>
-    <!--                    </td>-->
-    <!--                    <td>-->
-    <!--                        --><?php
-    //                        echo $TotalPayAbleAmountRow['SUM(PayAbleAmount)'] - $TotalActualReceiveAmountRow['SUM(ActualReceiveAmount)'];
-    //                        ?>
-    <!--                    </td>-->
-    <!---->
-    <!--                </tr>-->
-    <!--                </tbody>-->
-    <!--            </table>-->
-
-
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+    function exportToCSV() {
+        let wb = XLSX.utils.table_to_book(document.getElementById("myTable"), { sheet: "Sheet1" });
+        XLSX.writeFile(wb, "emi_report.csv", { bookType: "csv" });
+    }
+    function exportToExcel() {
+        let wb = XLSX.utils.table_to_book(document.getElementById("myTable"), { sheet: "Sheet1" });
+        XLSX.writeFile(wb, "emi_report.xlsx");
+    }
+</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<?php
-// ডেটাবেস কানেকশন
-//$servername = "localhost";
-//$username = "root";
-//$password = "";
-//$dbname = "sunx";
-//
-//$conn = new mysqli($servername, $username, $password, $dbname);
-
-//if ($conn->connect_error) {
-//    die("Connection failed: " . $conn->connect_error);
-//}
-
-// প্যারামিটার সেট করুন
-//$fromDate = '2024-05-06'; // ফ্রম ডেট
-//$toDate = '2024-09-28';   // টু ডেট
-//$salesID = 127;           // SalesID
-//// বাকি পেমেন্টের ডেটা
-//
-//
-//$GetScheduleData =  SQL_Select("SchedulePayment","SalesID=127 and Date BETWEEN '{$fromDate}' and '{$toDate}'");
-//
-//foreach($GetScheduleData as $ThisGetScheduleData){
-//
-//    // $Ac = mysql_query("select SUM(CostPerProduct*Qty) as Total from tblpurchasedproducts where TempNumber='{$MyTempNumber}'");
-//    // $row = @mysql_fetch_array($result, MYSQL_ASSOC);
-//
-//    $GetActualPaymentData =  SQL_Select("actualsalsepayment","SalesID=127 and DateOfCollection BETWEEN '{$fromDate}' and '{$toDate}'");
-//    $HTMLActualPayment="";
-//    foreach ($GetActualPaymentData as $ThisGetActualPaymentData){
-//
-//        if($ThisGetActualPaymentData["Term"]== $ThisGetScheduleData["Title"]){
-//            if ($ThisGetActualPaymentData)
-//            $ShowIntheReport ="NO";
-//
-//        }else{
-//
-//            $ShowIntheReport ="Yes";
-//            $PendingAmount = $ThisGetScheduleData["PayAbleAmount"] - $ThisGetActualPaymentData["ReceiveAmount"];
-//        }
-//
-//
-//        if($ShowIntheReport=='Yes')
-//            $HTMLActualPayment.='
-//                scp
-//                '.$ThisGetActualPaymentData["SalesID"].'<br>
-//                '.$ThisGetActualPaymentData["Term"].'<br>
-//                '.$ThisGetActualPaymentData["ReceiveAmount"].'<br>
-//                '.$ThisGetActualPaymentData["DateOfCollection"].'<br>
-//                <hr>
-//
-//            ';
-//
-//    }
-//
-//    $HTML.='
-//        acp
-//        '.$ThisGetScheduleData["SalesID"].'<br>
-//        '.$ThisGetScheduleData["Title"].'<br>
-//        '.$ThisGetScheduleData["PayAbleAmount"].'<br>
-//        '.$ThisGetScheduleData["Date"].'<br>
-//        <hr>
-//        '.$HTMLActualPayment.'
-//        <hr><hr>
-//
-//    ';
-//
-//
-//
-//}
-//
-//
-//echo '
-//
-//    '.$HTML.'
-//
-//';
-//
-//
-//
-//?>
-<!---->
-<!---->
-<!---->
-<!--</body>-->
-<!--</html>-->

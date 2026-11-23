@@ -1,962 +1,625 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: NiBiZ Soft
- * Date: 4/25/2019
- * Time: 1:47 PM
- */
-
 $Settings = SQL_Select("Settings", "SettingsID=1", "", true);
+// $_POST["FromDate"] = "2020-10-01";
+// $_POST["ToDate"] = "2025-10-31";
+// Get date range and category from POST
+$FromDate = isset($_POST["FromDate"]) ? trim($_POST["FromDate"]) : "";
+$ToDate = isset($_POST["ToDate"]) ? trim($_POST["ToDate"]) : "";
+$CategoryID = isset($_POST["CategoryID"]) ? $_POST["CategoryID"] : "";
 
-$ParentHeads=SQL_Select("incomeexpensetype");
+// Build date filter condition
+$dateFilter = "";
+if (!empty($FromDate) && !empty($ToDate)) {
+    $dateFilter = " AND Date BETWEEN '{$FromDate}' AND '{$ToDate}'";
+} elseif (!empty($FromDate)) {
+    $dateFilter = " AND Date >= '{$FromDate}'";
+} elseif (!empty($ToDate)) {
+    $dateFilter = " AND Date <= '{$ToDate}'";
+}
+// If both dates are empty, no date filter (shows all dates)
 
-foreach ($ParentHeads as $parentHead){
-
-//    Expense Start
-    if ($parentHead["Name"]=="Construction Material Purchases"){
-        $ConstructionMaterialPurchasesID=$parentHead["IncomeExpenseTypeID"];
-    }
-
-    if ($parentHead["Name"]=="Construction Labour Expenses"){
-        $ConstructionLabourExpensesID=$parentHead["IncomeExpenseTypeID"];
-    }
-    if ($parentHead["Name"]=="Project Approval Expense"){
-        $ProjectApprovalExpenseID=$parentHead["IncomeExpenseTypeID"];
-    }
-    if ($parentHead["Name"]=="Other Expense"){
-        $OtherExpenseID=$parentHead["IncomeExpenseTypeID"];
-    }
-
-
-    if ($parentHead["Name"]=="Indirect Income"){
-        $IndirectIncomeID=$parentHead["IncomeExpenseTypeID"];
-    }
-
-    if ($parentHead["Name"]=="Administrative Expense"){
-        $AdministrativeExpenseID=$parentHead["IncomeExpenseTypeID"];
-    }
-    if ($parentHead["Name"]=="Financial Expense"){
-        $FinancialExpenseID=$parentHead["IncomeExpenseTypeID"];
-    }
-    
-    if ($parentHead["Name"]=="Provision & Tax Paid"){
-        $ProvisionAndTaxPaidID=$parentHead["IncomeExpenseTypeID"];
-    }
-
-
-
-    //    Expense End
-
-//    Revenue Start
-
-    if ($parentHead["Name"]=="Revenue"){
-        $RevenueID=$parentHead["IncomeExpenseTypeID"];
-    }
-
-    //    Revenue End
-    
-
+// Build project filter condition
+$projectFilter = "";
+if (!empty($CategoryID)) {
+    $projectFilter = " AND ProjectID = " . (int)$CategoryID;
 }
 
-
-//Cost of Revenue Start
-$FromDate=0;
-$ToDate=0;
-
-$FromDate1=0;
-$ToDate1=0;
-
-if (!empty($_POST["FromDate"]) and !empty($_POST["ToDate"])){
-    $FromDate=$_POST["FromDate"];
-    $ToDate=$_POST["ToDate"];
-
-//    Revenue Start
-    $RevenueHeadChildDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$RevenueID}");
-
-
-    $TotalAmountOfRevenue=0;
-
-    foreach ($RevenueHeadChildDetails as $RevenueHeadChildDetail){
-        $RevenueTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$RevenueHeadChildDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-        foreach ($RevenueTransactionDetails as $RevenueTransactionDetail){
-
-                $TotalAmountOfRevenue += $RevenueTransactionDetail["cr"] - $RevenueTransactionDetail["dr"];
-
-            //if ($RevenueHeadChildDetail["ExpenseHeadIsType"] == 1){
-
-              //  $TotalAmountOfRevenue += $RevenueTransactionDetail["dr"] - $RevenueTransactionDetail["cr"];
-            //}else{
-              //  $TotalAmountOfRevenue += $RevenueTransactionDetail["cr"] - $RevenueTransactionDetail["dr"];
-
-            //}
-
-        }
-
+// Get project name if CategoryID is provided
+$projectName = "";
+if (!empty($CategoryID)) {
+    $project = SQL_Select("category", "CategoryID = " . (int)$CategoryID, "", true);
+    if (!empty($project)) {
+        $projectName = $project['Name'];
     }
-    
-
-    
-//    Revenue End
-
-
-//    Opening Construction Material start
-
-    // Stock Balance
-
-    $StockDetails=SQL_Select("stock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["FromDate"]}' ");
-    $stockAmount=0;
-    foreach ($StockDetails as $StockDetail){
-
-        if ($StockDetail["StockIsActive"]==1){
-            $stockAmount+=$StockDetail["Value"];
-        }else{
-            continue;
-        }
-
-    }
-//    used Stock
-    $UsedStockDetails=SQL_Select("usedstock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["FromDate"]}' ");
-    $usedStockAmount=0;
-    foreach ($UsedStockDetails as $UsedStockDetail){
-
-        if ($UsedStockDetail["UsedStockIsActive"]==1){
-            $usedStockAmount+=$UsedStockDetail["Value"];
-        }else{
-            continue;
-        }
-
-    }
-
-    $OpeningConstructionMaterialAmount =$stockAmount-$usedStockAmount;
-
-//   Opening Constraction material End
-
-
-
-    //    Construction Material Purchase start
-
-    $ConstructionMaterialHeadChildDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$ConstructionMaterialPurchasesID}");
-
-
-    $TotalAmountOfConstructionMaterialPurchases=0;
-
-    foreach ($ConstructionMaterialHeadChildDetails as $ConstructionMaterialHeadChildDetail){
-        $ConstructionMaterialChildTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$ConstructionMaterialHeadChildDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-        foreach ($ConstructionMaterialChildTransactionDetails as $ConstructionMaterialChildTransactionDetail){
-
-            if ($ConstructionMaterialHeadChildDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfConstructionMaterialPurchases += $ConstructionMaterialChildTransactionDetail["dr"] - $ConstructionMaterialChildTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfConstructionMaterialPurchases += $ConstructionMaterialChildTransactionDetail["cr"] - $ConstructionMaterialChildTransactionDetail["dr"];
-
-            }
-
-        }
-
-    }
-
-    //    Construction Material Purchase End
-
-
-//    Material Available For Used Start
-
-    $MaterialAvailableForUsed =$OpeningConstructionMaterialAmount+$TotalAmountOfConstructionMaterialPurchases;
-
-//    Material Available For Used End
-
-
-
-//    Closing Construction Material Start
-
-// Stock Balance
-
-    $ClosingStockDetails=SQL_Select("stock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["ToDate"]}' ");
-    $ClosingStockAmount=0;
-    foreach ($ClosingStockDetails as $ClosingStockDetail){
-
-        if ($ClosingStockDetail["StockIsActive"]==1){
-            $ClosingStockAmount+=$ClosingStockDetail["Value"];
-        }else{
-            continue;
-        }
-
-    }
-//    used Stock
-    $ClosingUsedStockDetails=SQL_Select("usedstock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["ToDate"]}' ");
-    $ClosingUsedStockAmount=0;
-    foreach ($ClosingUsedStockDetails as $ClosingUsedStockDetail){
-
-        if ($ClosingUsedStockDetail["UsedStockIsActive"]==1){
-            $ClosingUsedStockAmount+=$ClosingUsedStockDetail["Value"];
-        }else{
-            continue;
-        }
-
-    }
-
-    $ClosingConstructionMaterialAmount =$ClosingStockAmount-$ClosingUsedStockAmount;
-
-
-//    Closing Construction Material End
-
-
-
-//    Material Used During the Period Start
-
-    $MaterialUsedDuringthePeriod=$MaterialAvailableForUsed -$ClosingConstructionMaterialAmount;
-
-//    Material Used During the Period End
-
-
-//    Construction Labour Expense Start
-
-
-    $ConstructionLabourExpensesHeadDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$ConstructionLabourExpensesID}");
-
-
-    $TotalAmountOfConstructionLabourExpenses=0;
-    foreach ($ConstructionLabourExpensesHeadDetails as $ConstructionLabourExpensesHeadDetail){
-        $ConstructionLabourExpensesTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$ConstructionLabourExpensesHeadDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-
-
-        foreach ($ConstructionLabourExpensesTransactionDetails as $ConstructionLabourExpensesTransactionDetail){
-
-            if ($ConstructionLabourExpensesHeadDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfConstructionLabourExpenses += $ConstructionLabourExpensesTransactionDetail["dr"] - $ConstructionLabourExpensesTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfConstructionLabourExpenses += $ConstructionLabourExpensesTransactionDetail["cr"] - $ConstructionLabourExpensesTransactionDetail["dr"];
-
-            }
-
-        }
-
-
-    }
-
-
-//    Construction Labour End
-
-
-//    Project Approval Expenses Start
-
-
-    $ProjectApprovalExpenseHeadDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$ProjectApprovalExpenseID}");
-
-
-    $TotalAmountOfProjectApprovalExpense=0;
-    foreach ($ProjectApprovalExpenseHeadDetails as $ProjectApprovalExpenseHeadDetail){
-        $ProjectApprovalExpenseTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$ProjectApprovalExpenseHeadDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-
-
-        foreach ($ProjectApprovalExpenseTransactionDetails as $ProjectApprovalExpenseTransactionDetail){
-
-            if ($ProjectApprovalExpenseHeadDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfProjectApprovalExpense += $ProjectApprovalExpenseTransactionDetail["dr"] - $ProjectApprovalExpenseTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfProjectApprovalExpense += $ProjectApprovalExpenseTransactionDetail["cr"] - $ProjectApprovalExpenseTransactionDetail["dr"];
-
-            }
-
-        }
-
-    }
-
-//    Project Approval Expenses End
-
-
-//    Other Expense Start
-
-
-    $OtherExpenseHeadDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$OtherExpenseID}");
-
-
-    $TotalAmountOfOtherExpense=0;
-    foreach ($OtherExpenseHeadDetails as $OtherExpenseHeadDetail){
-        $OtherExpenseHeadDetailTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$OtherExpenseHeadDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-
-
-        foreach ($OtherExpenseHeadDetailTransactionDetails as $OtherExpenseHeadDetailTransactionDetail){
-
-            if ($OtherExpenseHeadDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfOtherExpense += $OtherExpenseHeadDetailTransactionDetail["dr"] - $OtherExpenseHeadDetailTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfOtherExpense += $OtherExpenseHeadDetailTransactionDetail["cr"] - $OtherExpenseHeadDetailTransactionDetail["dr"];
-
-            }
-
-        }
-
-
-    }
-
-//    Other Expense End
-
-
-
-//    Total Cost Transferred to Work in Process Start
-
-    $TotalCostTransferredtoWorkinProcess= $MaterialUsedDuringthePeriod + $TotalAmountOfConstructionLabourExpenses + $TotalAmountOfProjectApprovalExpense + $TotalAmountOfOtherExpense;
-
-//    Total Cost Transferred to Work in Process End
-
-
-
-//    Gross Profit Start
-
-    $GrossProfitAmount=$TotalAmountOfRevenue - $TotalCostTransferredtoWorkinProcess;
-
-// Gross Profit End
-
-
-//    Indirect Income Start
-
-    $IndirectIncomeHeadChildDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$IndirectIncomeID}");
-
-
-    $TotalAmountOfIndirectIncome=0;
-
-    foreach ($IndirectIncomeHeadChildDetails as $IndirectIncomeHeadChildDetails){
-        $IndirectIncomeTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$IndirectIncomeHeadChildDetails["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-        foreach ($IndirectIncomeTransactionDetails as $IndirectIncomeTransactionDetail){
-
-            if ($IndirectIncomeHeadChildDetails["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfIndirectIncome += $IndirectIncomeTransactionDetail["dr"] - $IndirectIncomeTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfIndirectIncome += $IndirectIncomeTransactionDetail["cr"] - $IndirectIncomeTransactionDetail["dr"];
-
-            }
-
-        }
-
-    }
-
-//    Indirect Income End
-
-
-//    Income From Operation Start
-
-    $IncomeFromOperationAmount= $GrossProfitAmount + $TotalAmountOfIndirectIncome;
-
-//    Income From Operation End
-
-
-//    Administration Expenses Start
-    
-    $AdministrativeExpenseHeadChildDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$AdministrativeExpenseID}");
-
-
-    $TotalAmountOfAdministrativeExpense=0;
-
-    foreach ($AdministrativeExpenseHeadChildDetails as $AdministrativeExpenseHeadChildDetail){
-        $AdministrativeExpenseTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$AdministrativeExpenseHeadChildDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-        foreach ($AdministrativeExpenseTransactionDetails as $AdministrativeExpenseTransactionDetail){
-
-            if ($AdministrativeExpenseHeadChildDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfAdministrativeExpense += $AdministrativeExpenseTransactionDetail["dr"] - $AdministrativeExpenseTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfAdministrativeExpense += $AdministrativeExpenseTransactionDetail["cr"] - $AdministrativeExpenseTransactionDetail["dr"];
-
-            }
-        }
-
-    }
-
-//    Administration Expenses End
-
-
-//    Income Before Tax & Interest Start
-
-    $IncomeBeforeTaxAndInterestAmount= $IncomeFromOperationAmount - $TotalAmountOfAdministrativeExpense;
-
-//    Income Before Tax & Interest End
-
-
-//    Financial Expense Start
-
-    $FinancialExpenseHeadChildDetails=SQL_Select("expensehead where IncomeExpenseTypeID={$FinancialExpenseID}");
-
-
-    $TotalAmountOfFinancialExpenseAmount=0;
-
-    foreach ($FinancialExpenseHeadChildDetails as $FinancialExpenseHeadChildDetail){
-        $FinancialExpenseTransactionDetails=SQL_Select("transaction where HeadOfAccountID={$FinancialExpenseHeadChildDetail["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate"]}' and '{$_REQUEST["ToDate"]}' ");
-
-        foreach ($FinancialExpenseTransactionDetails as $FinancialExpenseTransactionDetail){
-
-            if ($FinancialExpenseHeadChildDetail["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfFinancialExpenseAmount += $FinancialExpenseTransactionDetail["dr"] - $FinancialExpenseTransactionDetail["cr"];
-            }else{
-                $TotalAmountOfFinancialExpenseAmount += $FinancialExpenseTransactionDetail["cr"] - $FinancialExpenseTransactionDetail["dr"];
-
-            }
-        }
-
-    }
-
-//    Financial Expense End
-
-
-//    Income After Tax & Interest Start
-
-    $IncomeAfterTaxAndInterestAmount= $IncomeBeforeTaxAndInterestAmount - $TotalAmountOfFinancialExpenseAmount;
-
-//    Income After Tax & Interest End
-
-
-
 }
 
+// Currency format function
+function format_currency($amount)
+{
+    return number_format((float)$amount, 2);
+}
 
+// Helper function to calculate account balance
+function calculateAccountBalance($headID, $dateFilter = "", $projectFilter = "") {
+    $ResultDr = mysql_query("SELECT SUM(dr) AS total_dr FROM tbltransaction WHERE HeadOfAccountID = {$headID}{$dateFilter}{$projectFilter}");
+    $ResultCr = mysql_query("SELECT SUM(cr) AS total_cr FROM tbltransaction WHERE HeadOfAccountID = {$headID}{$dateFilter}{$projectFilter}");
+    
+    $DR = mysql_fetch_array($ResultDr);
+    $CR = mysql_fetch_array($ResultCr);
+    
+    $drAmount = isset($DR['total_dr']) ? (float)$DR['total_dr'] : 0;
+    $crAmount = isset($CR['total_cr']) ? (float)$CR['total_cr'] : 0;
+    
+    return ['dr' => $drAmount, 'cr' => $crAmount];
+}
 
-// Right side
+// Initialize totals
+$totalSales = 0;
+$totalPurchases = 0;
+$totalDirectExpenses = 0;
+$totalIndirectExpenses = 0;
+$totalIndirectIncome = 0;
+$openingStock = 0;
+$closingStock = 0;
+$grossProfit = 0;
+$netProfit = 0;
 
-if ( !empty($_POST["FromDate1"]) and !empty($_POST["ToDate1"]) ){
-    $FromDate1=$_POST["FromDate1"];
-    $ToDate1=$_POST["ToDate1"];
+// Get all IncomeExpenseTypes
+$allIncomeExpenseTypes = SQL_Select("incomeexpensetype", "1=1", "GLCode ASC");
+$salesGroups = [];
+$purchaseGroups = [];
+$directExpenseGroups = [];
+$indirectExpenseGroups = [];
+$indirectIncomeGroups = [];
 
-
-//    Revenue Start
-    //echo "<br>";
-    //echo $RevenueID."<br>";
-    $RevenueHeadChildDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$RevenueID}");
-
-
-    $TotalAmountOfRevenue1=0;
-
-    foreach ($RevenueHeadChildDetails1 as $RevenueHeadChildDetail1){
+// Process all IncomeExpenseTypes to categorize properly
+foreach ($allIncomeExpenseTypes as $type) {
+    $typeId = $type['IncomeExpenseTypeID'];
+    $typeName = $type['Name'];
+    $typeGLCode = isset($type['GLCode']) ? $type['GLCode'] : '';
+    
+    // Get all expense heads for this type
+    $expenseHeads = SQL_Select("expensehead", "IncomeExpenseTypeID = {$typeId} AND ExpenseHeadIsActive = 1");
+    
+    if (empty($expenseHeads)) continue;
+    
+    $headData = [];
+    $typeTotal = 0;
+    $category = 'indirect_expense'; // Default
+    
+    // Categorize by type name and GL code
+    $glPrefix = substr($typeGLCode, 0, 1);
+    $nameLower = strtolower($typeName);
+    
+    // Determine category
+    if (stripos($typeName, 'Sales') !== false || 
+        stripos($typeName, 'Revenue') !== false || 
+        (stripos($typeName, 'Income') !== false && stripos($typeName, 'Indirect') === false) ||
+        $glPrefix == '4') {
+        $category = 'sales';
+    } elseif (stripos($typeName, 'Purchase') !== false || 
+              stripos($typeName, 'Material') !== false ||
+              stripos($typeName, 'Cost') !== false ||
+              $glPrefix == '5') {
+        $category = 'purchase';
+    } elseif (stripos($typeName, 'Indirect Income') !== false || 
+              stripos($typeName, 'Other Income') !== false) {
+        $category = 'indirect_income';
+    } elseif (stripos($typeName, 'Construction') !== false ||
+              stripos($typeName, 'Direct') !== false ||
+              stripos($typeName, 'Labour') !== false ||
+              stripos($typeName, 'Project Approval') !== false) {
+        $category = 'direct_expense';
+    } else {
+        $category = 'indirect_expense';
+    }
+    
+    foreach ($expenseHeads as $head) {
+        $balance = calculateAccountBalance($head['ExpenseHeadID'], $dateFilter, $projectFilter);
         
-        //echo "tt = ".$RevenueHeadChildDetail1["ExpenseHeadID"];
-
+        // Calculate net amount based on account type
+        $netAmount = 0;
+        if ($head['ExpenseHeadIsType'] == 1) {
+            // Income/Revenue: CR - DR
+            $netAmount = $balance['cr'] - $balance['dr'];
+        } else {
+            // Expense: DR - CR
+            $netAmount = $balance['dr'] - $balance['cr'];
+        }
         
-        $RevenueTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$RevenueHeadChildDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($RevenueTransactionDetails1 as $RevenueTransactionDetail1){
-
-            //if ($RevenueHeadChildDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfRevenue1 += $RevenueTransactionDetail1["cr"] - $RevenueTransactionDetail1["dr"];
-            //}else{
-              //  $TotalAmountOfRevenue1 += $RevenueTransactionDetail1["cr"] - $RevenueTransactionDetail1["dr"];
-
-            //}
+        if ($netAmount > 0 || $netAmount < 0) {
+            $headData[] = [
+                'GLCode' => $head['GLCode'],
+                'Name' => $head['ExpenseHeadName'],
+                'Balance' => abs($netAmount),
+                'isType' => $head['ExpenseHeadIsType'],
+                'netAmount' => $netAmount
+            ];
             
-
-
-        }
-
-    }
-
-
-
-//    Revenue End
-
-
-
-
-//    Opening Construction Material start
-
-    // Stock Balance
-
-    $StockDetails1=SQL_Select("stock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["FromDate1"]}' ");
-    $stockAmount1=0;
-    foreach ($StockDetails1 as $StockDetail1){
-
-        if ($StockDetail1["StockIsActive"]==1){
-            $stockAmount1+=$StockDetail1["Value"];
-        }else{
-            continue;
-        }
-
-    }
-//    used Stock
-    $UsedStockDetails1=SQL_Select("usedstock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["FromDate1"]}' ");
-    $usedStockAmount1=0;
-    foreach ($UsedStockDetails1 as $UsedStockDetail1){
-
-        if ($UsedStockDetail1["UsedStockIsActive"]==1){
-            $usedStockAmount1+=$UsedStockDetail1["Value"];
-        }else{
-            continue;
-        }
-
-    }
-
-    $OpeningConstructionMaterialAmount1 =$stockAmount1-$usedStockAmount1;
-
-//   Opening Constraction material End
-
-
-
-    //    Construction Material Purchase start
-
-    $ConstructionMaterialHeadChildDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$ConstructionMaterialPurchasesID}");
-
-
-    $TotalAmountOfConstructionMaterialPurchases1=0;
-
-    foreach ($ConstructionMaterialHeadChildDetails1 as $ConstructionMaterialHeadChildDetail1){
-        $ConstructionMaterialChildTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$ConstructionMaterialHeadChildDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($ConstructionMaterialChildTransactionDetails1 as $ConstructionMaterialChildTransactionDetail1){
-
-            if ($ConstructionMaterialHeadChildDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfConstructionMaterialPurchases1 += $ConstructionMaterialChildTransactionDetail1["dr"] - $ConstructionMaterialChildTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfConstructionMaterialPurchases1 += $ConstructionMaterialChildTransactionDetail1["cr"] - $ConstructionMaterialChildTransactionDetail1["dr"];
-
-            }
-
-        }
-
-    }
-
-    //    Construction Material Purchase End
-
-
-//    Material Available For Used Start
-
-    $MaterialAvailableForUsed1 =$OpeningConstructionMaterialAmount1+$TotalAmountOfConstructionMaterialPurchases1;
-
-//    Material Available For Used End
-
-
-
-//    Closing Construction Material Start
-
-// Stock Balance
-
-    $ClosingStockDetails1=SQL_Select("stock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["ToDate1"]}' ");
-    $ClosingStockAmount1=0;
-    foreach ($ClosingStockDetails1 as $ClosingStockDetail1){
-
-        if ($ClosingStockDetail1["StockIsActive"]==1){
-            $ClosingStockAmount1+=$ClosingStockDetail1["Value"];
-        }else{
-            continue;
-        }
-
-    }
-//    used Stock
-    $ClosingUsedStockDetails1=SQL_Select("usedstock","Date BETWEEN '2016-01-01' AND  '{$_REQUEST["ToDate1"]}' ");
-    $ClosingUsedStockAmount1=0;
-    foreach ($ClosingUsedStockDetails1 as $ClosingUsedStockDetail1){
-
-        if ($ClosingUsedStockDetail1["UsedStockIsActive"]==1){
-            $ClosingUsedStockAmount1+=$ClosingUsedStockDetail1["Value"];
-        }else{
-            continue;
-        }
-
-    }
-
-    $ClosingConstructionMaterialAmount1 =$ClosingStockAmount1-$ClosingUsedStockAmount1;
-
-
-//    Closing Construction Material End
-
-
-
-//    Material Used During the Period Start
-
-    $MaterialUsedDuringthePeriod1=$MaterialAvailableForUsed1 -$ClosingConstructionMaterialAmount1;
-
-//    Material Used During the Period End
-
-
-//    Construction Labour Expense Start
-
-
-    $ConstructionLabourExpensesHeadDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$ConstructionLabourExpensesID}");
-
-
-    $TotalAmountOfConstructionLabourExpenses1=0;
-    foreach ($ConstructionLabourExpensesHeadDetails1 as $ConstructionLabourExpensesHeadDetail1){
-        $ConstructionLabourExpensesTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$ConstructionLabourExpensesHeadDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-
-
-        foreach ($ConstructionLabourExpensesTransactionDetails1 as $ConstructionLabourExpensesTransactionDetail1){
-
-            if ($ConstructionLabourExpensesHeadDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfConstructionLabourExpenses1 += $ConstructionLabourExpensesTransactionDetail1["dr"] - $ConstructionLabourExpensesTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfConstructionLabourExpenses1 += $ConstructionLabourExpensesTransactionDetail1["cr"] - $ConstructionLabourExpensesTransactionDetail1["dr"];
-
-            }
-
-        }
-
-
-    }
-
-
-//    Construction Labour End
-
-
-//    Project Approval Expenses Start
-
-
-    $ProjectApprovalExpenseHeadDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$ProjectApprovalExpenseID}");
-
-
-    $TotalAmountOfProjectApprovalExpense1=0;
-    foreach ($ProjectApprovalExpenseHeadDetails1 as $ProjectApprovalExpenseHeadDetail1){
-        $ProjectApprovalExpenseTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$ProjectApprovalExpenseHeadDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($ProjectApprovalExpenseTransactionDetails1 as $ProjectApprovalExpenseTransactionDetail1){
-
-            if ($ProjectApprovalExpenseHeadDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfProjectApprovalExpense1 += $ProjectApprovalExpenseTransactionDetail1["dr"] - $ProjectApprovalExpenseTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfProjectApprovalExpense1 += $ProjectApprovalExpenseTransactionDetail1["cr"] - $ProjectApprovalExpenseTransactionDetail1["dr"];
-
-            }
-
-        }
-
-    }
-
-//    Project Approval Expenses End
-
-
-//    Other Expense Start
-
-
-    $OtherExpenseHeadDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$OtherExpenseID}");
-
-
-    $TotalAmountOfOtherExpense1=0;
-    foreach ($OtherExpenseHeadDetails1 as $OtherExpenseHeadDetail1){
-        $OtherExpenseHeadDetailTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$OtherExpenseHeadDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-
-
-        foreach ($OtherExpenseHeadDetailTransactionDetails1 as $OtherExpenseHeadDetailTransactionDetail1){
-
-            if ($OtherExpenseHeadDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfOtherExpense1 += $OtherExpenseHeadDetailTransactionDetail1["dr"] - $OtherExpenseHeadDetailTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfOtherExpense1 += $OtherExpenseHeadDetailTransactionDetail1["cr"] - $OtherExpenseHeadDetailTransactionDetail1["dr"];
-
-            }
-
-        }
-
-
-    }
-
-//    Other Expense End
-
-
-
-//    Total Cost Transferred to Work in Process Start
-
-    $TotalCostTransferredtoWorkinProcess1= $MaterialUsedDuringthePeriod1 + $TotalAmountOfConstructionLabourExpenses1 + $TotalAmountOfProjectApprovalExpense1 + $TotalAmountOfOtherExpense1;
-
-//    Total Cost Transferred to Work in Process End
-
-
-
-
-//    Gross Profit Start
-
-    $GrossProfitAmount1=$TotalAmountOfRevenue1 - $TotalCostTransferredtoWorkinProcess1;
-
-// Gross Profit End
-
-
-//    Indirect Income Start
-
-    $IndirectIncomeHeadChildDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$IndirectIncomeID}");
-
-
-    $TotalAmountOfIndirectIncome1=0;
-
-    foreach ($IndirectIncomeHeadChildDetails1 as $IndirectIncomeHeadChildDetails1){
-        $IndirectIncomeTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$IndirectIncomeHeadChildDetails1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($IndirectIncomeTransactionDetails1 as $IndirectIncomeTransactionDetail1){
-
-            if ($IndirectIncomeHeadChildDetails1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfIndirectIncome1 += $IndirectIncomeTransactionDetail1["dr"] - $IndirectIncomeTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfIndirectIncome1 += $IndirectIncomeTransactionDetail1["cr"] - $IndirectIncomeTransactionDetail1["dr"];
-
-            }
-
-        }
-
-    }
-
-//    Indirect Income End
-
-
-//    Income From Operation Start
-
-    $IncomeFromOperationAmount1= $GrossProfitAmount1 + $TotalAmountOfIndirectIncome1;
-
-//    Income From Operation End
-
-
-//    Administration Expenses Start
-
-    $AdministrativeExpenseHeadChildDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$AdministrativeExpenseID}");
-
-
-    $TotalAmountOfAdministrativeExpense1=0;
-
-    foreach ($AdministrativeExpenseHeadChildDetails1 as $AdministrativeExpenseHeadChildDetail1){
-        $AdministrativeExpenseTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$AdministrativeExpenseHeadChildDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($AdministrativeExpenseTransactionDetails1 as $AdministrativeExpenseTransactionDetail1){
-
-            if ($AdministrativeExpenseHeadChildDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfAdministrativeExpense1 += $AdministrativeExpenseTransactionDetail1["dr"] - $AdministrativeExpenseTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfAdministrativeExpense1 += $AdministrativeExpenseTransactionDetail1["cr"] - $AdministrativeExpenseTransactionDetail1["dr"];
-
+            if ($head['ExpenseHeadIsType'] == 1) {
+                $typeTotal += ($balance['cr'] - $balance['dr']);
+            } else {
+                $typeTotal += ($balance['dr'] - $balance['cr']);
             }
         }
-
     }
-
-//    Administration Expenses End
-
-
-//    Income Before Tax & Interest Start
-
-    $IncomeBeforeTaxAndInterestAmount1= $IncomeFromOperationAmount1 - $TotalAmountOfAdministrativeExpense1;
-
-//    Income Before Tax & Interest End
-
-
-//    Financial Expense Start
-
-    $FinancialExpenseHeadChildDetails1=SQL_Select("expensehead where IncomeExpenseTypeID={$FinancialExpenseID}");
-
-
-    $TotalAmountOfFinancialExpenseAmount1=0;
-
-    foreach ($FinancialExpenseHeadChildDetails1 as $FinancialExpenseHeadChildDetail1){
-        $FinancialExpenseTransactionDetails1=SQL_Select("transaction where HeadOfAccountID={$FinancialExpenseHeadChildDetail1["ExpenseHeadID"]} and Date BETWEEN '{$_REQUEST["FromDate1"]}' and '{$_REQUEST["ToDate1"]}' ");
-
-        foreach ($FinancialExpenseTransactionDetails1 as $FinancialExpenseTransactionDetail1){
-
-            if ($FinancialExpenseHeadChildDetail1["ExpenseHeadIsType"] == 1){
-
-                $TotalAmountOfFinancialExpenseAmount1 += $FinancialExpenseTransactionDetail1["dr"] - $FinancialExpenseTransactionDetail1["cr"];
-            }else{
-                $TotalAmountOfFinancialExpenseAmount1 += $FinancialExpenseTransactionDetail1["cr"] - $FinancialExpenseTransactionDetail1["dr"];
-
-            }
+    
+    if (count($headData) > 0) {
+        $typeData = [
+            'Name' => $typeName,
+            'GLCode' => $typeGLCode,
+            'total' => abs($typeTotal),
+            'items' => $headData
+        ];
+        
+        switch ($category) {
+            case 'sales':
+                $salesGroups[$typeId] = $typeData;
+                $totalSales += abs($typeTotal);
+                break;
+            case 'purchase':
+                $purchaseGroups[$typeId] = $typeData;
+                $totalPurchases += abs($typeTotal);
+                break;
+            case 'direct_expense':
+                $directExpenseGroups[$typeId] = $typeData;
+                $totalDirectExpenses += abs($typeTotal);
+                break;
+            case 'indirect_income':
+                $indirectIncomeGroups[$typeId] = $typeData;
+                $totalIndirectIncome += abs($typeTotal);
+                break;
+            default: // indirect_expense
+                $indirectExpenseGroups[$typeId] = $typeData;
+                $totalIndirectExpenses += abs($typeTotal);
+                break;
         }
-
     }
-
-//    Financial Expense End
-
-
-//    Income After Tax & Interest Start
-
-    $IncomeAfterTaxAndInterestAmount1= $IncomeBeforeTaxAndInterestAmount1 - $TotalAmountOfFinancialExpenseAmount1;
-
-//    Income After Tax & Interest End
-
-
-
 }
 
+// Calculate Trading Account figures
+$costOfGoodsSold = $openingStock + $totalPurchases + $totalDirectExpenses - $closingStock;
+$grossProfit = $totalSales - $costOfGoodsSold;
 
-$MainContent .= '
+// Calculate Net Profit
+$netProfit = $grossProfit - $totalIndirectExpenses + $totalIndirectIncome;
+?>
 
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
+
 <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-
-    <title>Profit & Loss Account</title>
-
+    <meta charset="UTF-8">
+    <title>Trading, Profit & Loss Account & Balance Sheet</title>
     <style>
-        .m-b-30{
-            margin-bottom: 30px;
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f9f9f9;
         }
-        .m-t-30{
-            margin-top: 30px;
-        }
-        
-          .table-bordered th, .table-bordered td {
-                border: 1px solid rgba(0,0,0,.3) !important;
-          }
-          
-          .company-name{
-            border-bottom: 1px solid rgba(0,0,0,.3);
-          }
 
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px #ccc;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #00CC00;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #00CC00;
+            padding-bottom: 5px;
+        }
+
+        .date-range {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .section-header {
+            background: #00CC00;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .group-header {
+            background: #e9f9e9;
+            font-weight: bold;
+        }
+
+        .sub-header {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .indent {
+            padding-left: 30px;
+        }
+
+        .amount {
+            text-align: right;
+        }
+
+        .total-row {
+            background: #e0e0e0;
+            font-weight: bold;
+        }
+
+        .profit-row {
+            background: #d4edda;
+            font-weight: bold;
+            color: #155724;
+        }
+
+        .loss-row {
+            background: #f8d7da;
+            font-weight: bold;
+            color: #721c24;
+        }
+
+        .gross-profit-row {
+            background: #cce5ff;
+            font-weight: bold;
+        }
+
+        .link-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            text-align: center;
+        }
     </style>
 </head>
+
 <body>
-
-
-<div style="width: 95%; margin: auto">
-    <p style="font-size: 16px">Printing Date & Time: '.date('F j-y, h:i:sa').'</p>
-</div>
-
-<div style="width: 95%; margin: auto">
-
-    <div style="padding: 10px 0px" class="company-name row">
-        <div  class="col-md-2 text-center">
-            <img height="70px" src="./upload/' . $Settings["logo"] . '" alt="">
+    <div class="container">
+        <h1><?php echo htmlspecialchars($Settings['CompanyName']); ?></h1>
+        <?php if (!empty($projectName)): ?>
+        <div style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #333;">
+            Project: <?php echo htmlspecialchars($projectName); ?>
         </div>
-        <div  class="col-md-9 text-center">
-            <h3 style="font-weight: bold">'.$Settings["CompanyName"].'</h3>
-            <p style="font-size: 18px;">'.$Settings["Address"].'</p>
-
+        <?php endif; ?>
+        <div class="date-range">
+            <strong>Period:</strong> 
+            <?php 
+            if (!empty($FromDate) && !empty($ToDate)) {
+                echo date('F d, Y', strtotime($FromDate)) . ' to ' . date('F d, Y', strtotime($ToDate));
+            } elseif (!empty($FromDate)) {
+                echo date('F d, Y', strtotime($FromDate)) . ' to End';
+            } elseif (!empty($ToDate)) {
+                echo 'From Start to ' . date('F d, Y', strtotime($ToDate));
+            } else {
+                echo 'From Start to End';
+            }
+            ?>
         </div>
 
+        <!-- ===== TRADING ACCOUNT ===== -->
+        <h2>Income Statement</h2>
+        <table>
+            <tr>
+                <th>Particulars</th>
+                <th style="text-align:center; width:200px;">Amount (Tk)</th>
+                <th>Particulars</th>
+                <th style="text-align:center; width:200px;">Amount (Tk)</th>
+            </tr>
+
+            <!-- LEFT SIDE - EXPENSES -->
+            <tr class="section-header">
+                <td colspan="2"><strong>To Expenses</strong></td>
+                <td colspan="2"><strong>By Income</strong></td>
+            </tr>
+
+            <?php
+            // Opening Stock (if available)
+            if ($openingStock > 0) {
+                echo '<tr>
+                    <td style="padding-left: 20px;">To Opening Stock</td>
+                    <td class="amount">' . format_currency($openingStock) . '</td>
+                    <td></td>
+                    <td></td>
+                </tr>';
+            }
+
+            // Purchases
+            if (count($purchaseGroups) > 0) {
+                uasort($purchaseGroups, function($a, $b) {
+                    return strcmp($a['GLCode'], $b['GLCode']);
+                });
+
+                foreach ($purchaseGroups as $typeId => $typeData) {
+                    echo '<tr class="group-header">
+                        <td style="padding-left: 20px;">To ' . htmlspecialchars(($typeData['GLCode'] ? $typeData['GLCode'] . ' - ' : '') . $typeData['Name']) . '</td>
+                        <td class="amount">' . format_currency($typeData['total']) . '</td>
+                        <td></td>
+                        <td></td>
+                    </tr>';
+                    
+                    usort($typeData['items'], function($a, $b) {
+                        return strcmp($a['GLCode'], $b['GLCode']);
+                    });
+                    
+                    foreach ($typeData['items'] as $item) {
+                        echo '<tr>
+                            <td class="indent" style="padding-left: 60px">' . htmlspecialchars($item['GLCode'] . ' - ' . $item['Name']) . '</td>
+                            <td class="amount">' . format_currency($item['Balance']) . '</td>
+                            <td></td>
+                            <td></td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Direct Expenses
+            if (count($directExpenseGroups) > 0) {
+                uasort($directExpenseGroups, function($a, $b) {
+                    return strcmp($a['GLCode'], $b['GLCode']);
+                });
+
+                foreach ($directExpenseGroups as $typeId => $typeData) {
+                    echo '<tr class="group-header">
+                        <td style="padding-left: 20px;">To ' . htmlspecialchars(($typeData['GLCode'] ? $typeData['GLCode'] . ' - ' : '') . $typeData['Name']) . '</td>
+                        <td class="amount">' . format_currency($typeData['total']) . '</td>
+                        <td></td>
+                        <td></td>
+                    </tr>';
+                    
+                    usort($typeData['items'], function($a, $b) {
+                        return strcmp($a['GLCode'], $b['GLCode']);
+                    });
+                    
+                    foreach ($typeData['items'] as $item) {
+                        echo '<tr>
+                            <td class="indent" style="padding-left: 60px">' . htmlspecialchars($item['GLCode'] . ' - ' . $item['Name']) . '</td>
+                            <td class="amount">' . format_currency($item['Balance']) . '</td>
+                            <td></td>
+                            <td></td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Closing Stock (if available)
+            if ($closingStock > 0) {
+                echo '<tr>
+                    <td style="padding-left: 20px;">To Closing Stock</td>
+                    <td class="amount">' . format_currency($closingStock) . '</td>
+                    <td></td>
+                    <td></td>
+                </tr>';
+            }
+
+            // Gross Loss
+            if ($grossProfit < 0) {
+                echo '<tr class="loss-row">
+                    <td style="padding-left: 20px;"><strong>To Gross Loss c/d</strong></td>
+                    <td class="amount"><strong>' . format_currency(abs($grossProfit)) . '</strong></td>
+                    <td></td>
+                    <td></td>
+                </tr>';
+            }
+            ?>
+
+            <!-- RIGHT SIDE - INCOME -->
+            <?php
+            // Sales
+            if (count($salesGroups) > 0) {
+                uasort($salesGroups, function($a, $b) {
+                    return strcmp($a['GLCode'], $b['GLCode']);
+                });
+
+                foreach ($salesGroups as $typeId => $typeData) {
+                    echo '<tr class="group-header">
+                        <td></td>
+                        <td></td>
+                        <td style="padding-left: 20px;">By ' . htmlspecialchars(($typeData['GLCode'] ? $typeData['GLCode'] . ' - ' : '') . $typeData['Name']) . '</td>
+                        <td class="amount">' . format_currency($typeData['total']) . '</td>
+                    </tr>';
+                    
+                    usort($typeData['items'], function($a, $b) {
+                        return strcmp($a['GLCode'], $b['GLCode']);
+                    });
+                    
+                    foreach ($typeData['items'] as $item) {
+                        echo '<tr>
+                            <td></td>
+                            <td></td>
+                            <td class="indent" style="padding-left: 60px">' . htmlspecialchars($item['GLCode'] . ' - ' . $item['Name']) . '</td>
+                            <td class="amount">' . format_currency($item['Balance']) . '</td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Gross Profit
+            if ($grossProfit >= 0) {
+                echo '<tr class="gross-profit-row">
+                    <td></td>
+                    <td></td>
+                    <td style="padding-left: 20px;"><strong>By Gross Profit c/d</strong></td>
+                    <td class="amount"><strong>' . format_currency($grossProfit) . '</strong></td>
+                </tr>';
+            }
+
+            // Totals
+            $totalTradingLeft = $openingStock + $totalPurchases + $totalDirectExpenses - $closingStock + ($grossProfit < 0 ? abs($grossProfit) : 0);
+            $totalTradingRight = $totalSales + ($grossProfit >= 0 ? $grossProfit : 0);
+            ?>
+            <tr class="total-row">
+                <td><strong>Total</strong></td>
+                <td class="amount"><strong><?php echo format_currency($totalTradingLeft); ?></strong></td>
+                <td><strong>Total</strong></td>
+                <td class="amount"><strong><?php echo format_currency($totalTradingRight); ?></strong></td>
+            </tr>
+        </table>
+
+        <!-- ===== PROFIT AND LOSS ACCOUNT ===== -->
+        <h2>PROFIT AND LOSS ACCOUNT</h2>
+        <table>
+            <tr>
+                <th>Particulars</th>
+                <th style="text-align:center; width:200px;">Amount (Tk)</th>
+                <th>Particulars</th>
+                <th style="text-align:center; width:200px;">Amount (Tk)</th>
+            </tr>
+
+            <!-- LEFT SIDE - EXPENSES -->
+            <tr class="section-header">
+                <td colspan="2"><strong>To Expenses</strong></td>
+                <td colspan="2"><strong>By Income</strong></td>
+            </tr>
+
+            <?php
+            // Gross Profit/Loss from Trading
+            if ($grossProfit >= 0) {
+                echo '<tr class="gross-profit-row">
+                    <td></td>
+                    <td></td>
+                    <td style="padding-left: 20px;"><strong>By Gross Profit b/d</strong></td>
+                    <td class="amount"><strong>' . format_currency($grossProfit) . '</strong></td>
+                </tr>';
+            } else {
+                echo '<tr class="loss-row">
+                    <td style="padding-left: 20px;"><strong>To Gross Loss b/d</strong></td>
+                    <td class="amount"><strong>' . format_currency(abs($grossProfit)) . '</strong></td>
+                    <td></td>
+                    <td></td>
+                </tr>';
+            }
+
+            // Indirect Expenses
+            if (count($indirectExpenseGroups) > 0) {
+                uasort($indirectExpenseGroups, function($a, $b) {
+                    return strcmp($a['GLCode'], $b['GLCode']);
+                });
+
+                foreach ($indirectExpenseGroups as $typeId => $typeData) {
+                    echo '<tr class="group-header">
+                        <td style="padding-left: 20px;">To ' . htmlspecialchars(($typeData['GLCode'] ? $typeData['GLCode'] . ' - ' : '') . $typeData['Name']) . '</td>
+                        <td class="amount">' . format_currency($typeData['total']) . '</td>
+                        <td></td>
+                        <td></td>
+                    </tr>';
+                    
+                    usort($typeData['items'], function($a, $b) {
+                        return strcmp($a['GLCode'], $b['GLCode']);
+                    });
+                    
+                    foreach ($typeData['items'] as $item) {
+                        echo '<tr>
+                            <td class="indent" style="padding-left: 60px">' . htmlspecialchars($item['GLCode'] . ' - ' . $item['Name']) . '</td>
+                            <td class="amount">' . format_currency($item['Balance']) . '</td>
+                            <td></td>
+                            <td></td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Net Loss
+            if ($netProfit < 0) {
+                echo '<tr class="loss-row">
+                    <td style="padding-left: 20px;"><strong>To Net Loss c/d</strong></td>
+                    <td class="amount"><strong>' . format_currency(abs($netProfit)) . '</strong></td>
+                    <td></td>
+                    <td></td>
+                </tr>';
+            }
+            ?>
+
+            <!-- RIGHT SIDE - INCOME -->
+            <?php
+            // Indirect Income
+            if (count($indirectIncomeGroups) > 0) {
+                uasort($indirectIncomeGroups, function($a, $b) {
+                    return strcmp($a['GLCode'], $b['GLCode']);
+                });
+
+                foreach ($indirectIncomeGroups as $typeId => $typeData) {
+                    echo '<tr class="group-header">
+                        <td></td>
+                        <td></td>
+                        <td style="padding-left: 20px;">By ' . htmlspecialchars(($typeData['GLCode'] ? $typeData['GLCode'] . ' - ' : '') . $typeData['Name']) . '</td>
+                        <td class="amount">' . format_currency($typeData['total']) . '</td>
+                    </tr>';
+                    
+                    usort($typeData['items'], function($a, $b) {
+                        return strcmp($a['GLCode'], $b['GLCode']);
+                    });
+                    
+                    foreach ($typeData['items'] as $item) {
+                        echo '<tr>
+                            <td></td>
+                            <td></td>
+                            <td class="indent" style="padding-left: 60px">' . htmlspecialchars($item['GLCode'] . ' - ' . $item['Name']) . '</td>
+                            <td class="amount">' . format_currency($item['Balance']) . '</td>
+                        </tr>';
+                    }
+                }
+            }
+
+            // Net Profit
+            if ($netProfit >= 0) {
+                echo '<tr class="profit-row">
+                    <td></td>
+                    <td></td>
+                    <td style="padding-left: 20px;"><strong>By Net Profit c/d</strong></td>
+                    <td class="amount"><strong>' . format_currency($netProfit) . '</strong></td>
+                </tr>';
+            }
+
+            // Totals
+            $totalPLLeft = ($grossProfit < 0 ? abs($grossProfit) : 0) + $totalIndirectExpenses + ($netProfit < 0 ? abs($netProfit) : 0);
+            $totalPLRight = ($grossProfit >= 0 ? $grossProfit : 0) + $totalIndirectIncome + ($netProfit >= 0 ? $netProfit : 0);
+            ?>
+            <tr class="total-row">
+                <td><strong>Total</strong></td>
+                <td class="amount"><strong><?php echo format_currency($totalPLLeft); ?></strong></td>
+                <td><strong>Total</strong></td>
+                <td class="amount"><strong><?php echo format_currency($totalPLRight); ?></strong></td>
+            </tr>
+        </table>
+
+        <!-- ===== BALANCE SHEET LINK ===== -->
+        <!-- <div class="link-section">
+            <h3 style="margin-top: 0;">Balance Sheet</h3>
+            <p>For Balance Sheet report, please refer to: <strong>BalanceSheet.php</strong></p>
+            <p style="color: #666; font-size: 14px;">The Balance Sheet shows Assets, Liabilities, and Equity as of the period end date.</p>
+        </div> -->
+
+        <div style="margin-top: 30px; text-align: center; color: #666; font-size: 12px;">
+            <p>Printed on: <?php echo date('F j, Y, h:i A'); ?></p>
+        </div>
     </div>
-
-    <div class="projectName text-center m-b-30 m-t-30">
-        <h4 style="font-weight: bold">Profit & Loss Account</h4>
-    </div>
-    
-   <table class="table table-bordered table-hover table-fixed table-sm">
-        
-          <thead>
-                <tr>
-                    <th  scope="col" class="text-center"> <h5>Particulars</h5></th>
-                    <th  scope="col" class="text-center"> <h5>'.HumanReadAbleDateFormat($FromDate).' To '.HumanReadAbleDateFormat($ToDate).'</h5></th>
-                    <th  scope="col" class="text-center"> <h5>'.HumanReadAbleDateFormat($FromDate1).' To '.HumanReadAbleDateFormat($ToDate1).'</h5></th>
-                </tr>
-                </thead>
-                <thead>
-                <tr>
-                    <th scope="col"></th>
-                    <th width="300px" class="text-right" scope="col">Tk</th>
-                    <th width="300px"  class="text-right"  scope="col">TK</th>
-                </tr>
-                </thead>
-        
-                <tbody>
-                    <tr style="font-weight: bold">
-                        <td>Revenue</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfRevenue).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfRevenue1).'</td>
-                        
-                    </tr>
-                    <tr>
-                        <td>Cost Of Revenue</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalCostTransferredtoWorkinProcess).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalCostTransferredtoWorkinProcess1).'</td>
-                        
-                    </tr>
-                    <tr  style="font-weight: bold">
-                        <td>Gross Profit</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($GrossProfitAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($GrossProfitAmount1).'</td>
-                        
-                    </tr>
-                    <tr>
-                        <td>Indirect Income</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfIndirectIncome).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfIndirectIncome1).'</td>
-                        
-                    </tr>
-                    <tr style="font-weight: bold">
-                        <td>Income From Operation</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeFromOperationAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeFromOperationAmount1).'</td>
-                        
-                    </tr>
-                    
-                    <tr>
-                        <td>Administration Expenses</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfAdministrativeExpense).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfAdministrativeExpense1).'</td>
-                        
-                    </tr>
-                    <tr  style="font-weight: bold">
-                        <td>Income Before Tax & Interest</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeBeforeTaxAndInterestAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeBeforeTaxAndInterestAmount1).'</td>
-                        
-                    </tr>
-                    
-                    <tr>
-                        <td>Financial Expense</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfFinancialExpenseAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($TotalAmountOfFinancialExpenseAmount1).'</td>
-                        
-                    </tr>
-                    
-                    <tr style="font-weight: bold">
-                        <td>Income After Tax & Interest</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeAfterTaxAndInterestAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeAfterTaxAndInterestAmount1).'</td>
-                        
-                    </tr>
-                    
-                    <tr>
-                        <td>Provision & Tax Paid</td>
-                        <td class="text-right">0</td>
-                        <td class="text-right">0</td>
-                        
-                    </tr>
-                    
-                    
-                    <tr style="font-weight: bold">
-                        <td>Net Profit/ (Loss)</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeAfterTaxAndInterestAmount).'</td>
-                        <td class="text-right">'.BangladeshiCurencyFormat($IncomeAfterTaxAndInterestAmount1).'</td>
-                        
-                    </tr>
-                    
-                    
-                </tbody>
-                
-   </table>
-
-</div>
-
-
-<!-- Optional JavaScript -->
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
-        integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
-        crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
-        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
-        crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
-        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
-        crossorigin="anonymous"></script>
 </body>
+
 </html>
-
-
-';

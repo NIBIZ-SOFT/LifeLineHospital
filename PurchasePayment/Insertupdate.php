@@ -48,7 +48,7 @@ if (!empty($TheEntityName)) {
 
         <div class="col-3 col-md-3 mb-2">
             <label class="form-label">Qty</label>
-            <input type="number" name="items[' . $EditIndex . '][requisitionQty]" value="' . $editItem->requisitionQty . '" class="form-control" thisRequisition="true">
+            <input type="number" step="0.01" name="items[' . $EditIndex . '][requisitionQty]" value="' . $editItem->requisitionQty . '" class="form-control" thisRequisition="true">
         </div>
 
         <div class="col-3 col-md-3 mb-2">
@@ -275,11 +275,11 @@ $(function() {
                                 </div>
                                 <div class="col-md-3 col-6">
                                     <label class="form-label">Qty</label>
-                                    <input type="number" name="items[\${index}][requisitionQty]" value="\${newQty}" class="form-control" thisRequisition="true">
+                                    <input type="number" step="0.01" name="items[\${index}][requisitionQty]" value="\${newQty}" class="form-control" thisRequisition="true">
                                 </div>
                                 <div class="col-md-3 col-6">
                                     <label class="form-label">Rate</label>
-                                    <input type="text" name="items[\${index}][requisitionRate]" value="\${rate}" class="form-control" readonly thisRequisitonRate="true">
+                                    <input type="number" step="0.01" name="items[\${index}][requisitionRate]" value="\${rate}" class="form-control" thisRequisitonRate="true">
                                 </div>
                                 <div class="col-md-6 col-12 mt-2">
                                     <label class="form-label">Amount</label>

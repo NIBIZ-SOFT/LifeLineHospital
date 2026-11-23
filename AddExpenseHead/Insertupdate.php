@@ -54,7 +54,7 @@ $MainContent = '
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold">Inc/Exp Type Name</label>
+                    <label class="form-label fw-semibold">Sub Head List</label>
                     ' . CCTL_IncomeExpenseType("IncomeExpenseTypeID", $TheEntityName["IncomeExpenseTypeID"], "", true) . '
                 </div>
 
@@ -90,15 +90,15 @@ $MainContent = '
 ';
 
 
-$MainContent.=FormInsertUpdate(
-		$EntityName=$EntityLower,
-		$FormTitle,
-		$Input,
-		$ButtonCaption,
-		$ActionURL
-	);
+// $MainContent.=FormInsertUpdate(
+// 		$EntityName=$EntityLower,
+// 		$FormTitle,
+// 		$Input,
+// 		$ButtonCaption,
+// 		$ActionURL
+// 	);
 
-	$MainContent .='
+$MainContent .='
 	
 	<script>
 
@@ -127,11 +127,8 @@ $MainContent.=FormInsertUpdate(
         });
 
     </script>
-	    
-	
-	
-	
-	';
+	 
+';
 
 
 ?>

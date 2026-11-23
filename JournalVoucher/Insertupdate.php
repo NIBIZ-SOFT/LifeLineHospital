@@ -61,13 +61,40 @@ function buildGroupRows($type, $headIds, $amounts) {
     return $html;
 }
 
-if ($TheEntityName["Type"]==1){
-    $Selected="selected";
-}elseif ($TheEntityName["Type"]==2){
-    $Selected="selected";
-}else{
-    $Selected="";
+$SelectedType1 = ($TheEntityName["Type"] == 1) ? "selected" : "";
+$SelectedType2 = ($TheEntityName["Type"] == 2) ? "selected" : "";
+$SelectedType3 = ($TheEntityName["Type"] == 3) ? "selected" : "";
+$SelectedType4 = ($TheEntityName["Type"] == 4) ? "selected" : "";
+
+
+$landOwners = SQL_Select('landowner', 'LandOwnerIsActive=1');
+$LandOwnerOptions = '';
+
+foreach ($landOwners as $owner) {
+
+	$selected = ($TheEntityName["LandOwnerID"] == $owner["LandOwnerID"]) ? 'selected' : '';
+
+	$LandOwnerOptions .= '
+        <option value="' . $owner["LandOwnerID"] . '"' . $selected . '>
+            ' . $owner["LandOwnerName"] . '
+        </option>
+    ';
 }
+
+$customers = SQL_Select('customer', 'CustomerIsActive=1');
+$CustomerOptions = '';
+
+foreach ($customers as $customer) {
+
+	$selected = ($TheEntityName["CustomerID"] == $customer["CustomerID"]) ? 'selected' : '';
+
+	$CustomerOptions .= '
+        <option value="' . $customer["CustomerID"] . '"' . $selected . '>
+            ' . $customer["CustomerName"] . '
+        </option>
+    ';
+}
+
 $Input = array();
 
 $MainContent .= '
@@ -83,13 +110,15 @@ $MainContent .= '
                         <label class="form-label">Type</label>
                         <select class="form-select" name="Type" id="TypeSelect" required>
                             <option value="0">Others</option>
-                            <option ' . $ContructorID . ' value="1" '.$Selected.' >Contructor</option>
-                            <option ' . $VendorID . ' value="2" '.$Selected.'>Vendor</option>
+                            <option ' . $ContructorID . ' value="1" '.$SelectedType1.' >Contructor</option>
+                            <option ' . $VendorID . ' value="2" '.$SelectedType2.'>Vendor</option>
+                            <option ' . $LandOwner . ' value="3" '.$SelectedType3.'>Land Owner</option>
+                            <option ' . $Customer . ' value="4" '.$SelectedType4.'>Customer</option>
                         </select>
                     </div>
                 
                     <!-- Vendor -->
-                    
+                
                     <div id="vendorDiv" style="display:none;" class="col-md-6">
                         <label class="form-label">Vendor</label>
                             ' . CCTL_Vendor($Name = "VendorID", $TheEntityName["VendorID"], $Where = "", $PrependBlankOption = true) . '
@@ -100,8 +129,24 @@ $MainContent .= '
                         <label class="form-label">Contractor</label>
                             ' . CCTL_Contructor("ContructorID", $TheEntityName["ContructorID"],$Where = "", true) . '
                     </div>
+                
+                    <!-- Land Owner -->
+                    <div class="col-md-6" id="landOwnerDiv" style="display:none;">
+                        <label class="form-label">Land Owner</label>
+						 <select  name="LandOwnerID"class="form-control"required>
+							<option value="">Select Land Owner</option>
+							' . $LandOwnerOptions . '
+						 </select>
+                    </div>
                     
-                    
+                    <!-- Customer --!>
+                    <div class="col-md-6" id="CustomerDiv" style="display:none;">
+                        <label class="form-label">Customer</label>
+						 <select  name="CustomerID"class="form-control"required>
+							<option value="">Select Customer</option>
+							' . $CustomerOptions . '
+						 </select>
+                    </div>
                     
                     <!-- Project (Dr.) -->
                     <div class="col-md-4">
@@ -150,7 +195,7 @@ $MainContent .= '
                 
                     <!-- Description -->
                     <div class="col-md-12">
-                        <label class="form-label">Description</label>
+                        <label class="form-label">Narration</label>
                         ' . CTL_InputTextArea("Description", isset($TheEntityName["Description"]) ? $TheEntityName["Description"] : "", "", 4, "required") . '
                     </div>
                 
@@ -222,34 +267,88 @@ $MainContent .= '
         });
 
 // Validation
+// Validation
         const typeSelect = document.getElementById("TypeSelect");
+
         const vendorDiv = document.getElementById("vendorDiv");
         const contractorDiv = document.getElementById("contractorDiv");
+        const landOwnerDiv = document.getElementById("landOwnerDiv");
+        const CustomerDiv = document.getElementById("CustomerDiv");
 
         const vendorField = vendorDiv.querySelector("select");
         const contractorField = contractorDiv.querySelector("select");
+        const landOwnerField = landOwnerDiv.querySelector("select");
+        const CustomerField = CustomerDiv.querySelector("select");
 
         function toggleFields() {
             const selected = typeSelect.value;
 
             if (selected === "2") {
+
                 vendorDiv.style.display = "block";
                 vendorField.required = true;
 
                 contractorDiv.style.display = "none";
                 contractorField.required = false;
+
+                landOwnerDiv.style.display = "none";
+                CustomerField.required = false;
+
+                CustomerDiv.style.display = "none";
+                landOwnerField.required = false;
+
             } else if (selected === "1") {
+
                 contractorDiv.style.display = "block";
                 contractorField.required = true;
 
                 vendorDiv.style.display = "none";
                 vendorField.required = false;
-            } else {
+
+                landOwnerDiv.style.display = "none";
+                landOwnerField.required = false;
+
+                CustomerDiv.style.display = "none";
+                CustomerField.required = false;
+
+            } else if (selected === "3") {
+
+                landOwnerDiv.style.display = "block";
+                landOwnerField.required = true;
+
                 vendorDiv.style.display = "none";
                 vendorField.required = false;
 
                 contractorDiv.style.display = "none";
                 contractorField.required = false;
+
+                CustomerDiv.style.display = "none";
+                CustomerField.required = false;
+
+            }else if (selected === "4") {
+
+                landOwnerDiv.style.display = "none";
+                landOwnerField.required = false;
+
+                vendorDiv.style.display = "none";
+                vendorField.required = false;
+
+                contractorDiv.style.display = "none";
+                contractorField.required = false;
+
+                CustomerDiv.style.display = "block";
+                CustomerField.required = true;
+
+            } else {
+
+                vendorDiv.style.display = "none";
+                vendorField.required = false;
+
+                contractorDiv.style.display = "none";
+                contractorField.required = false;
+
+                landOwnerDiv.style.display = "none";
+                landOwnerField.required = false;
             }
         }
 
@@ -260,4 +359,3 @@ $MainContent .= '
     });
 
 </script>
-

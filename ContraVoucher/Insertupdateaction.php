@@ -37,20 +37,24 @@ if ($ErrorUserInput["_Error"]) {
 
     if ($UpdateMode) $Where = "{$Entity}ID = {$contravoucherDetails[0][$Entity."ID"]} AND {$Entity}UUID = '{$contravoucherDetails[0][$Entity."UUID"]}'";
 
-//    echo "<pre>";
-//    print_r($_POST["Amount"]);
+//     echo "<pre>";
+// print_r($_REQUEST);
 //    die();
+
 
     // Form
     $TheEntityName = SQL_InsertUpdate(
         $Entity = "{$Entity}",
         $TheEntityNameData = array(
 
-            "ProjectID" => $_POST["ProjectID"],
-            "ProjectName" => GetCategoryName($_POST["ProjectID"]),
+            "ProjectID" => $_POST["FromProjectID"],
+            "ProjectName" => GetCategoryName($_POST["FromProjectID"]),
 
             "BankCashID" => $_POST["formAccaunt"],
             "BankCashName" => GetBankCashTitle($_POST["formAccaunt"]),
+
+            "formHeadOfAccount" => $_POST["formHeadOfAccount"],
+            "formHeadOfAccountName" => GetExpenseHeadName($_POST["formHeadOfAccount"]),
 
             "ChequeNumber" => $_POST["ChequeNumber"],
             "Description" => $_POST["Description"],
@@ -81,6 +85,9 @@ if ($ErrorUserInput["_Error"]) {
             "BankCashID" => $_POST["toAccaunt"],
             "BankCashName" => GetBankCashTitle($_POST["toAccaunt"]),
 
+            "toHeadOfAccount" => $_POST["toHeadOfAccount"],
+            "toHeadOfAccountName" => GetExpenseHeadName($_POST["toHeadOfAccount"]),
+
             "ChequeNumber" => $_POST["ChequeNumber"],
             "Description" => $_POST["Description"],
 
@@ -108,14 +115,14 @@ if ($ErrorUserInput["_Error"]) {
             $Entity = "Transaction",
             $TheEntityNameData = array(
 
-                "ProjectID" => $_POST["ProjectID"],
-                "ProjectName" => GetCategoryName($_POST["ProjectID"]),
+                "ProjectID" => $_POST["FromProjectID"],
+                "ProjectName" => GetCategoryName($_POST["FromProjectID"]),
 
                 "BankCashID" => $_POST["formAccaunt"],
                 "BankCashName" => GetBankCashTitle($_POST["formAccaunt"]),
 
-                "HeadOfAccountName" => GetBankCashTitle($_POST["formAccaunt"]),
-
+                "HeadOfAccountID" => $_POST["formHeadOfAccount"],
+                "HeadOfAccountName" => GetExpenseHeadName($_POST["formHeadOfAccount"]),
 
                 "VoucherNo"=> $voucherNo,
                 "VoucherType"=>"Contra",
@@ -142,8 +149,8 @@ if ($ErrorUserInput["_Error"]) {
 
                 "BankCashID" => $_POST["toAccaunt"],
                 "BankCashName" => GetBankCashTitle($_POST["toAccaunt"]),
-
-                "HeadOfAccountName" => GetBankCashTitle($_POST["toAccaunt"]),
+                "HeadOfAccountID" => $_POST["toHeadOfAccount"],
+                "HeadOfAccountName" => GetExpenseHeadName($_POST["toHeadOfAccount"]),
 
                 "VoucherNo"=> $voucherNo,
                 "VoucherType"=>"Contra",

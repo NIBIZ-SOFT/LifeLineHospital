@@ -1,61 +1,60 @@
 <?
-	include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
+include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
 
-    $UpdateMode=false;
-	if(isset($_REQUEST[$Entity."ID"])&&isset($_REQUEST[$Entity."UUID"]))$UpdateMode=true;
+$UpdateMode = false;
+if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"])) $UpdateMode = true;
 
-    $ErrorUserInput["_Error"]=false;
+$ErrorUserInput["_Error"] = false;
 
-	if(!$UpdateMode)$_REQUEST["{$Entity}ID"]=0;
-	//some change goes here
-	$TheEntityName=SQL_Select($Entity="{$Entity}", $Where="{$UniqueField} = '{$_POST["{$UniqueField}"]}' AND {$Entity}ID <> {$_REQUEST[$Entity."ID"]}");
-    if(count($TheEntityName)>0){
-	    $ErrorUserInput["_Error"]=true;
-	    $ErrorUserInput["_Message"]="This Value Already Taken.";
-	}
+if (!$UpdateMode) $_REQUEST["{$Entity}ID"] = 0;
+//some change goes here
+$TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$UniqueField} = '{$_POST["{$UniqueField}"]}' AND {$Entity}ID <> {$_REQUEST[$Entity . "ID"]}");
+if (count($TheEntityName) > 0) {
+	$ErrorUserInput["_Error"] = true;
+	$ErrorUserInput["_Message"] = "This Value Already Taken.";
+}
 
-    if($ErrorUserInput["_Error"]){
-        include "./script/{$_REQUEST["Base"]}/Insertupdate.php";
-	}else{
-	    $Where="";
-	    if($UpdateMode)$Where="{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'";
+if ($ErrorUserInput["_Error"]) {
+	include "./script/{$_REQUEST["Base"]}/Insertupdate.php";
+} else {
+	$Where = "";
+	if ($UpdateMode) $Where = "{$Entity}ID = {$_REQUEST[$Entity . "ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity . "UUID"]}'";
 
-        if($_POST["CompnayId"]!=""){
-            $cid=$_POST["CompnayId"];
-        }else
-            $cid=$_SESSION["UserID"];
-        
 
-    	$user=SQL_Select("user","UserID='$cid'","",true,"","",false,"");
+	$cid = $_POST["EmployeeName"];
 
-		// give the data dase fields name and the post value name
-	    $TheEntityName=SQL_InsertUpdate(
-	        $Entity="{$Entity}",
-			$TheEntityNameData=array(
-                                                                                              
-        		"CompnayId"=>$cid,
-        		"EmployeeName"=>$user["UserName"],
-        		"TypeLeave"=>$_POST["TypeLeave"],		
-        		"Problem"=>$_POST["Problem"],
-        		"StartDate"=>$_POST["StartDate"],
-        		"EndDate"=>$_POST["EndDate"],
-        		"LeaveStatus"=>$_POST["LeaveStatus"],
-        		"LeaveIsDisplay"=>1,
-		
-		        "{$Entity}IsActive"=>$_POST["{$Entity}IsActive"],
-			),
-			$Where
-			);
 
-	    $MainContent.="
-	        ".CTL_Window($Title="Application Setting Management", "The operation complete successfully and<br>
+	$user = SQL_Select("Employee", "EmployeeID='$cid'");
+
+
+
+	// give the data dase fields name and the post value name
+	$TheEntityName = SQL_InsertUpdate(
+		$Entity = "{$Entity}",
+		$TheEntityNameData = array(
+
+			"CompnayId" => $cid,
+			"EmployeeName" => $user[0]["Name"],
+			"TypeLeave" => $_POST["LeaveType"],
+			"Problem" => $_POST["Problem"],
+			"StartDate" => $_POST["StartDate"],
+			"EndDate" => $_POST["EndDate"],
+			"LeaveStatus" => !empty($_POST["LeaveStatus"]) ? $_POST["LeaveStatus"] : "Pending",
+			"LeaveIsDisplay" => 1,
+
+			"{$Entity}IsActive" => $_POST["{$Entity}IsActive"],
+		),
+		$Where
+	);
+
+	$MainContent .= "
+	        " . CTL_Window($Title = "Application Setting Management", "The operation complete successfully and<br>
 			<br>
 			The $EntityCaptionLower information has been stored.<br>
 			<br>
-			Please click <a href=\"".ApplicationURL("{$_REQUEST["Base"]}","Manage")."\">here</a> to proceed.",300)."
+			Please click <a href=\"" . ApplicationURL("{$_REQUEST["Base"]}", "Manage") . "\">here</a> to proceed.", 300) . "
 	        <script language=\"JavaScript\" >
-	            window.location='".ApplicationURL("{$_REQUEST["Base"]}","Manage")."';
+	            window.location='" . ApplicationURL("{$_REQUEST["Base"]}", "Manage") . "';
 	        </script>
 		";
-	}
-?>
+}

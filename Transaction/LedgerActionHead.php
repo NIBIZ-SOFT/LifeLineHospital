@@ -1,34 +1,29 @@
 <?php
-$_POST["HeadOfAccountID"] = $_POST["HeadOfAccount_ID"];
+$_POST["HeadOfAccountID"] = $_REQUEST["HeadOfAccount_ID"];
 $Settings = SQL_Select("Settings", "SettingsID=1", "", true);
 
-$Transactions = SQL_Select("Transaction","1=1 order by Date ASC");
+// Check if dates are provided (not null/empty)
+$hasDateFilter = !empty($_POST["FromDate"]) && !empty($_POST["ToDate"]);
+$hasHeadOfAccountFilter = !empty($_REQUEST["HeadOfAccountID"]);
 
-$uniqHeadProjectIDS = array();
-foreach ($Transactions as $Transaction) {
-    $uniqHeadProjectIDS[$Transaction["ProjectID"]] = $Transaction["ProjectID"];
+if ($hasDateFilter && $hasHeadOfAccountFilter) {
+    // Both date and HeadOfAccount filters
+    $JournalDetails = SQL_Select("Transaction", "HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' and  Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' order by Date ASC");
+
+} elseif ($hasDateFilter && !$hasHeadOfAccountFilter) {
+    // Only date filter (no HeadOfAccount filter)
+    $JournalDetails = SQL_Select("Transaction", "Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' order by Date ASC");
+
+} elseif (!$hasDateFilter && $hasHeadOfAccountFilter) {
+    // Only HeadOfAccount filter (no date filter - show all from start to end)
+    $JournalDetails = SQL_Select("Transaction", "HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' order by Date ASC");
+
+} else {
+    // No filters - show all transactions from start to end
+    $JournalDetails = SQL_Select("Transaction", "1=1 order by Date ASC");
 }
 
-foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
-
-    if (!empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && !empty($_POST["HeadOfAccountID"])) {
-
-        $JournalDetails = SQL_Select("Transaction", "ProjectID='{$uniqHeadProjectID}' and  HeadOfAccountID='{$_REQUEST["HeadOfAccountID"]}' and  Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' order by Date ASC");
-
-    } elseif (!empty($_POST["FromDate"]) && !empty($_POST["ToDate"]) && empty($_POST["HeadOfAccountID"])) {
-
-        $JournalDetails = SQL_Select("Transaction", "ProjectID='{$uniqHeadProjectID}' and Date BETWEEN '{$_REQUEST["FromDate"]}' AND  '{$_REQUEST["ToDate"]}' order by Date ASC");
-
-    } elseif (!empty($_POST["HeadOfAccountID"])) {
-
-        $JournalDetails = SQL_Select("Transaction", "ProjectID='{$uniqHeadProjectID}' and HeadOfAccountID='{$_POST["HeadOfAccountID"]}' order by Date ASC");
-
-
-    } else {
-        $JournalDetails = SQL_Select("Transaction","ProjectID='{$uniqHeadProjectID}'  order by Date ASC");
-    }
-
-    if (empty($JournalDetails[0]["ProjectName"])) continue;
+if (!empty($JournalDetails)) {
 
     $headDetails="";
     $sl=1;
@@ -50,8 +45,18 @@ foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
             if($JournalDetail["VendorID"]==0 and $JournalDetail["ContructorID"]==0)
                 $GetCustRecordDR["VendorName"] = "Operational Cost";
         }
-            
-
+            // view link will be voucher type wise 
+            // index.php?Theme=default&Base=CrVoucher&Script=Voucher&NoHeader&NoFooter&CrVoucherID=55
+            $viewLink = "";
+            if($JournalDetail["VoucherType"]=="CV")
+                $viewLink = ApplicationURL("CrVoucher", "Voucher&NoHeader&NoFooter&CrVoucherID=" . $JournalDetail["VoucherNo"]);
+            if($JournalDetail["VoucherType"]=="DV")
+                $viewLink = ApplicationURL("DrVoucher", "Voucher&NoHeader&NoFooter&DrVoucherID=" . $JournalDetail["VoucherNo"]);
+            if($JournalDetail["VoucherType"]=="Contra")
+                $viewLink = ApplicationURL("ContraVoucher", "Voucher&NoHeader&NoFooter&ContraVoucherID=" . $JournalDetail["VoucherNo"]);
+            if($JournalDetail["VoucherType"]=="Journal")
+                $viewLink = ApplicationURL("JournalVoucher", "Voucher&NoHeader&NoFooter&JournalVoucherID=" . $JournalDetail["VoucherNo"]);
+           
         $headDetails .= '
 
                 <tr>
@@ -71,6 +76,7 @@ foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
                     <td class="text-center">' . $JournalDetail["VoucherType"] . '</td>
                     <td class="text-right">' . BangladeshiCurencyFormat($JournalDetail["dr"]) . '</td>
                     <td class="text-right">' . BangladeshiCurencyFormat($JournalDetail["cr"]) . '</td>
+                    <td class="text-center"><a target="_blank" href="' . $viewLink . '">View</a></td>
                     
                    
                 </tr>
@@ -83,11 +89,8 @@ foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
 
     }
 
-    $headOfAccountArea .= '
+    $headOfAccountArea = '
         <div class="headOfAccountArea m-b-30">
-            <div class="text-center">
-                <h5>' . $JournalDetails[0]["ProjectName"] . '</h5>
-            </div>
             <table class="table table-hover table-sm table-bordered">
                 <thead>
                 <tr>
@@ -100,7 +103,7 @@ foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
                     <th class="text-center" scope="col">Type Of Voucher</th>
                     <th class="text-right" scope="col">Dr.</th>
                     <th class="text-right" scope="col">Cr.</th>
-                    
+                    <th class="text-center" scope="col">View</th>
                     
                 </tr>
                 </thead>
@@ -120,7 +123,6 @@ foreach ($uniqHeadProjectIDS as $uniqHeadProjectID){
     
             </table>
         </div>';
-
 
 }
 

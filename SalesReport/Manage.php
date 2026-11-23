@@ -1,17 +1,31 @@
-<?
+<?php
 
 /*
-' . CCTL_Sales_ID($Name = "SalesID", $TheEntityName["SalesID"], $Where = "", $PrependBlankOption = true) . '
+ * Sales Report page
+ * -----------------------------------------------------------------
+ * Shows report filter cards (party ledger, seller, package, division,
+ * EMI). Each card posts to its own report script.
+ *
+ * Dropdown search: the select boxes with class "smart-select" are turned into
+ * searchable dropdowns by SmartSelect (loaded from the CDN below).
+ *
+ * Reference helper (not used on this page):
+ * ' . CCTL_Sales_ID($Name = "SalesID", $TheEntityName["SalesID"], $Where = "", $PrependBlankOption = true) . '
+ */
 
-						*/	
-
+// Permission check - user must have access to the sales report
 GetPermission("OptionSalesReport");
 
+// ---------------------------------------------------------------
+// 1) Page header + libraries (jQuery, SmartSelect css/js)
+//    jQuery must load BEFORE SmartSelect.js
+// ---------------------------------------------------------------
 $MainContent .= '
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/NIBIZ-SOFT/RealBizDEVCDN/SmartSelect.css">
+<script src="https://cdn.jsdelivr.net/gh/NIBIZ-SOFT/RealBizDEVCDN/SmartSelect.js"></script>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12 text-center mb-4">
@@ -33,14 +47,23 @@ $MainContent .= '
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Customer Name</label>
-                        <select name="customer_id" id="CustomerName" class="form-select select2">
+                        <select name="customer_id" id="CustomerName" class="smart-select">
                             <option value="">Select Customer</option>';
+
+// ---------------------------------------------------------------
+// 2) Customer options
+//    Label format: Name ( ID : 7 )  Phone
+//    Search works on the full label, so typing a name, ID or phone
+//    number finds the customer.
+// ---------------------------------------------------------------
 $customerlist = SQL_Select("customer", "CustomerIsActive=1 order by CustomerID DESC");
 foreach ($customerlist as $customer) {
-    $customerID = $customer['CustomerID'];
-    $customerName = $customer['CustomerName'];
-    $MainContent .= '<option value="' . $customerID . '">' . $customerID . ' - ' . $customerName . '</option>';
+    $customerID    = $customer['CustomerID'];
+    $customerName  = $customer['CustomerName'];
+    $customerPhone = $customer['Phone'];
+    $MainContent .= '<option value="' . $customerID . '">' . $customerName . ' ( ID : ' . $customerID . ' )  ' . $customerPhone . '</option>';
 }
+
 $MainContent .= '
                         </select>
                     </div>
@@ -58,7 +81,7 @@ $MainContent .= '
                 <form method="POST" action="' . ApplicationURL("Report", "CustomerPartyLedgerSummery&NoHeader&NoFooter") . '">
                     <div class="mb-3">
                         <label class="form-label">Project Name</label>
-                        ' . CCTL_ProductsCategory("CategoryID", $TheEntityName["CategoryID"], "", true, "form-select select2") . '
+                        ' . CCTL_ProductsCategory("CategoryID", $TheEntityName["CategoryID"], "", true, "smart-select") . '
                     </div>
                     <div class="mb-3">
                         <label class="form-label">From Date</label>
@@ -82,12 +105,20 @@ $MainContent .= '
                 <form method="POST" action="' . ApplicationURL("Report", "SellerNameWisePartyLedger&NoHeader&NoFooter") . '">
                     <div class="mb-3">
                         <label class="form-label">Seller Name</label>
-                        <select name="SalerNameID" id="salerDropdown" class="form-select select2">
+                        <select name="SalerNameID" id="salerDropdown" class="smart-select">
                             <option value="" disabled selected>Select Seller</option>';
-$SalerName = SQL_Select("salername", "SalerNameIsActive=1 order by SalerNameID ASC");
-foreach ($SalerName as $saler) {
-    $MainContent .= '<option value="' . $saler['SalerNameID'] . '">' . $saler['SalerNameID'] . ' - ' . $saler['Name'] . '</option>';
+
+// ---------------------------------------------------------------
+// 3) Seller options from tbluser (Salespersons)
+// ---------------------------------------------------------------
+$salesUsers = SQL_Select("User", "UserIsActive=1 AND LOWER(user_type) IN ('salesperson', 'sales') AND UserID!=1 ORDER BY NameFirst ASC");
+if (is_array($salesUsers)) {
+    foreach ($salesUsers as $su) {
+        $uName = !empty($su['NameFirst']) ? $su['NameFirst'] : $su['UserName'];
+        $MainContent .= '<option value="' . $su['UserID'] . '">' . $su['UserID'] . ' - ' . $uName . '</option>';
+    }
 }
+
 $MainContent .= '
                         </select>
                     </div>
@@ -169,17 +200,10 @@ $MainContent .= '
             <div class="card-body">
                 <form method="POST" action="' . ApplicationURL("SalesReport", "EMIReport&NoHeader&NoFooter") . '">
                     <div class="mb-3">
-                        <label class="form-label">Division</label>
-                        <select name="Division" class="form-select">
-                            <option value="" disabled>Select a division</option>
-                            <option value="Corporate">Corporate</option>
-                            <option value="SSD">SSD</option>
-                            <option value="SED">SED</option>
-                            <option value="CST">CST</option>
-                            <option value="Founder">Founder</option>
-                            <option value="Referral">Referral</option>
-                        </select>
+                        <label class="form-label">Project Name</label>
+                        ' . CCTL_ProductsCategory("CategoryID", $TheEntityName["CategoryID"], "", true) . '
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">From Date</label>
                         <input type="date" class="form-control" name="FromDate">
@@ -195,11 +219,17 @@ $MainContent .= '
     </div>
 
     </div>
+
 <script>
 $(document).ready(function() {
-       $(".select2").select2();
+
+    // Turn every .smart-select dropdown into a searchable dropdown
+    // (customer: search by name, ID or phone; seller; project)
+    $(".smart-select").select2({ width: "100%" });
+
+    // Debug log when a customer is picked
     if ($("#CustomerName").length > 0) {
-        console.log("#customer_id element found.");
+        console.log("#CustomerName element found.");
         $("#CustomerName").on("change", function() {
             var customerId = $(this).val();
             if (customerId) {
@@ -209,53 +239,49 @@ $(document).ready(function() {
             }
         });
     } else {
-        console.log("#customer_id element not found.");
+        console.log("#CustomerName element not found.");
     }
+
+    // Load the sales list when a sales option changes
+    $("#salesOption").on("change", function() {
+        $.ajax({
+            url: "index.php?Theme=default&Base=Report&Script=SalesID&ProductID=" + $("#salesOption").val() + "&NoHeader&NoFooter",
+            type: "POST",
+            dataType: "text",
+            success: function(data) {
+                $("#CustomerList").html(data);
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    });
+
+    // When the project changes in the Party Ledger form, reload the product list
+    $("#partyLedgerFrom select[name=CategoryID]").on("change", function() {
+        var mainThis = $(this);
+        var SalesOptionDom = document.getElementById("salesOption");
+        SalesOptionDom.innerHTML = "<option value=\'0\'>Select Product</option>";
+
+        $.ajax({
+            url: "index.php?Theme=default&Base=Report&Script=SalesID&NoHeader&NoFooter",
+            type: "POST",
+            dataType: "JSON",
+            data: { ProjectID: mainThis.val() },
+            success: function(data) {
+                data.forEach(function(element) {
+                    var node = document.createElement("option");
+                    node.setAttribute("value", element["SalesID"]);
+                    node.textContent = element["ProductName"];
+                    SalesOptionDom.appendChild(node);
+                });
+            },
+            error: function(error) {
+                console.log(error);
+            }
+        });
+    });
 });
 </script>
-    <script>
-        $(document).ready(function() {
-            $(".select2").select2();
-
-            $("#salesOption").on("change", function() {
-                $.ajax({
-                    url: "index.php?Theme=default&Base=Report&Script=SalesID&ProductID=" + $("#salesOption").val() + "&NoHeader&NoFooter",
-                    type: "POST",
-                    dataType: "text",
-                    success: function(data) {
-                        $("#CustomerList").html(data);
-                    },
-                    error: function(error) {
-                        console.log(error);
-                    }
-                });		    
-            });
-
-            $("#partyLedgerFrom select[name=CategoryID]").on("change", function() {
-                var mainThis = $(this);
-                var SalesOptionDom = document.getElementById("salesOption");
-                SalesOptionDom.innerHTML = "<option value=\'0\'>Select Product</option>";
-
-                $.ajax({
-                    url: "index.php?Theme=default&Base=Report&Script=SalesID&NoHeader&NoFooter",
-                    type: "POST",
-                    dataType: "JSON",
-                    data: { ProjectID: mainThis.val() },
-                    success: function(data) {
-                        data.forEach(function(element) {
-                            var node = document.createElement("option");
-                            node.setAttribute("value", element["SalesID"]);
-                            node.textContent = element["ProductName"];
-                            SalesOptionDom.appendChild(node);
-                        });
-                    },
-                    error: function(error) {
-                        console.log(error);
-                    }
-                });
-            });
-        });
-    </script>
 </div>
 ';
-

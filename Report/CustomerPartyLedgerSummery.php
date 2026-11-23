@@ -5,90 +5,107 @@ $FromDate   = isset($_REQUEST["FromDate"])   ? $_REQUEST["FromDate"]   : '0000-0
 $ToDate     = isset($_REQUEST["ToDate"])     ? $_REQUEST["ToDate"]     : '0000-00-00';
 $CategoryID = isset($_REQUEST["CategoryID"]) ? intval($_REQUEST["CategoryID"]) : 0;
 
-if ($FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
-    $Count = 0;
-    $sl = 1;
-    $trHtml = "";
+$Count = 0;
+$sl = 1;
+$trHtml = "";
 
-    $TotalCrAmount = 0;
-    $TotalDrAmount = 0;
-    $TotalDueAmount = 0;
-    $TotalFlatPrice = 0;
-    $TotalShareQty = 0;
+$TotalCrAmount = 0;
+$TotalDrAmount = 0;
+$TotalDueAmount = 0;
+$TotalFlatPrice = 0;
+$TotalShareQty = 0;
 
-    $ProjectName = "All Categories";
-    if ($CategoryID > 0) {
-        $categoryData = SQL_Select("category", "CategoryID=" . $CategoryID);
-        $ProjectName  = isset($categoryData[0]["Name"]) ? $categoryData[0]["Name"] : "Unknown Category";
+$ProjectName = "All Categories";
+if ($CategoryID > 0) {
+    $categoryData = SQL_Select("category", "CategoryID=" . $CategoryID);
+    $ProjectName  = isset($categoryData[0]["Name"]) ? $categoryData[0]["Name"] : "Unknown Category";
+}
+
+$salesCondition = "1=1";
+
+if (!empty($FromDate) && !empty($ToDate) && $FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
+    $salesCondition .= " AND SalesDate BETWEEN '$FromDate' AND '$ToDate'";
+}
+
+if ($CategoryID > 0) {
+    $salesCondition .= " AND ProjectID=" . $CategoryID;
+}
+
+// sales
+$SalesList = SQL_Select("sales", $salesCondition . " ORDER BY SalesDate ASC");
+
+foreach ($SalesList as $Sales) {
+    $SalesID    = $Sales["SalesID"];
+    $ProductID  = $Sales["ProductID"];
+    $CustomerID = $Sales["CustomerID"];
+    $SaleProject = SQL_Select("category", "CategoryID=" . $Sales["ProjectID"], "", true);
+
+    $Discount = isset($Sales["Discount"]) ? $Sales["Discount"] : 0;
+    $ShareQty = isset($Sales["Quantity"]) ? $Sales["Quantity"] : 0;
+
+    // Product
+    $ProductDetails = SQL_Select("products", "ProductsID=" . $ProductID);
+
+    $ProductName  = isset($ProductDetails[0]["FlatType"]) ? $ProductDetails[0]["FlatType"] : "-";
+    $ProductPrice = isset($ProductDetails[0]["NetSalesPrice"]) ? $ProductDetails[0]["NetSalesPrice"] : 0;
+    $subTotal = ($ProductPrice * $ShareQty) - $Discount;
+    $SalLer = SQL_Select("SalerName", "SalerNameID=" . $Sales["SellerID"], "", true);
+    $SellerName = isset($SalLer["Name"]) ? $SalLer["Name"] : "-";
+    $SalesDate  = isset($Sales["SalesDate"]) ? $Sales["SalesDate"] : "-";
+    $Division   = isset($Sales["Division"]) ? $Sales["Division"] : "-";
+
+    // --- CrV
+    $CrCondition = "CrVoucherIsDisplay=0
+                AND SalesID=" . $SalesID;
+
+    if (!empty($FromDate) && !empty($ToDate) && $FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
+        $CrCondition .= " AND Date BETWEEN '$FromDate' AND '$ToDate'";
     }
 
-    $salesCondition = "SalesDate BETWEEN '" . $FromDate . "' AND '" . $ToDate . "'";
-    if ($CategoryID > 0) {
-        $salesCondition .= " AND ProjectID=" . $CategoryID;
+    $CrVouchers = SQL_Select(
+        "CrVoucher",
+        $CrCondition . " ORDER BY Date ASC"
+    );
+
+    $CrAmount = 0;
+    $CrVoucherNos = array();
+    $LastCrDate = "";
+    foreach ($CrVouchers as $Cr) {
+        $CrAmount += $Cr["Amount"];
+        $CrVoucherNos[] = $Cr["CrVoucherID"];
+        $LastCrDate = $Cr["Date"];
     }
 
-    // sales
-    $SalesList = SQL_Select("sales", $salesCondition . " ORDER BY SalesDate ASC");
+    // --- DrT
+    $DrAmount = 0;
+    $DrVoucherNos = array();
+    $DrCondition = "SalesID=" . $SalesID;
 
-    foreach ($SalesList as $Sales) {
-        $SalesID    = $Sales["SalesID"];
-        $ProductID  = $Sales["ProductID"];
-        $CustomerID = $Sales["CustomerID"];
-        $SaleProject = SQL_Select("category", "CategoryID=" . $Sales["ProjectID"], "", true);
+    if (!empty($FromDate) && !empty($ToDate) && $FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
+        $DrCondition .= " AND Date BETWEEN '$FromDate' AND '$ToDate'";
+    }
 
-        $Discount = isset($Sales["Discount"]) ? $Sales["Discount"] : 0;
-        $ShareQty = isset($Sales["Quantity"]) ? $Sales["Quantity"] : 0;
+    $DrVouchers = SQL_Select(
+        "Transaction",
+        $DrCondition . " ORDER BY Date ASC"
+    );
 
-        // Product
-        $ProductDetails = SQL_Select("products", "ProductsID=" . $ProductID);
+    // print_r($DrVouchers);
+    // die();
 
-        $ProductName  = isset($ProductDetails[0]["FlatType"]) ? $ProductDetails[0]["FlatType"] : "-";
-        $ProductPrice = isset($ProductDetails[0]["NetSalesPrice"]) ? $ProductDetails[0]["NetSalesPrice"] : 0;
-        $SalLer = SQL_Select("SalerName", "SalerNameID=" . $Sales["SellerID"], "", true);
-        $SellerName = isset($SalLer["Name"]) ? $SalLer["Name"] : "-";
-        $SalesDate  = isset($Sales["SalesDate"]) ? $Sales["SalesDate"] : "-";
-        $Division   = isset($Sales["Division"]) ? $Sales["Division"] : "-";
+    foreach ($DrVouchers as $Dr) {
+        $DrAmount += $Dr["dr"];
+        $DrVoucherNos[] = $Dr["VoucherNo"];
+    }
 
-        // --- CrV
-        $CrVouchers = SQL_Select(
-            "CrVoucher",
-            "Date BETWEEN '" . $FromDate . "' AND '" . $ToDate . "' 
-             AND CrVoucherIsDisplay=0 
-             AND ProductsID=" . $ProductID . " 
-             AND CustomerID=" . $CustomerID . " 
-             ORDER BY Date ASC"
-        );
-        $CrAmount = 0;
-        $CrVoucherNos = array();
-        $LastCrDate = "";
-        foreach ($CrVouchers as $Cr) {
-            $CrAmount += $Cr["Amount"];
-            $CrVoucherNos[] = $Cr["CrVoucherID"];
-            $LastCrDate = $Cr["Date"];
-        }
+    // Sum
+    $DueAmount = $subTotal - ($CrAmount - $DrAmount);
+    $PercentCollection = ($subTotal > 0) ? (($CrAmount - $DrAmount) / $subTotal) * 100 : 0;
 
-        // --- DrT
-        $DrAmount = 0;
-        $DrVoucherNos = array();
-        $DrVouchers = SQL_Select(
-            "Transaction",
-            "Date BETWEEN '" . $FromDate . "' AND '" . $ToDate . "' 
-             AND CustomerID=" . $CustomerID . " 
-             ORDER BY Date ASC"
-        );
-        foreach ($DrVouchers as $Dr) {
-            $DrAmount += $Dr["dr"];
-            $DrVoucherNos[] = $Dr["VoucherNo"];
-        }
+    $CustomerName  = GetCustomerName($CustomerID);
+    $CustomerPhone = GetCustomerPhone($CustomerID);
 
-        // Sum
-        $DueAmount = $ProductPrice - ($CrAmount - $DrAmount);
-        $PercentCollection = ($ProductPrice > 0) ? (($CrAmount - $DrAmount) / $ProductPrice) * 100 : 0;
-
-        $CustomerName  = GetCustomerName($CustomerID);
-        $CustomerPhone = GetCustomerPhone($CustomerID);
-
-        $trHtml .= "
+    $trHtml .= "
         <tr style='text-align:center;'>
             <td>" . $sl . "<br>SID:" . $SalesID . "</td>
             <td>" . $SaleProject["Name"] . "</td>
@@ -101,7 +118,7 @@ if ($FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
             <td class='text-right'>" . BangladeshiCurencyFormat($ProductPrice) . "/-</td>
             <td class='text-right'>" . $ShareQty . "</td>
             <td class='text-right'>" . BangladeshiCurencyFormat($Discount) . "/-</td>
-            <td class='text-right'>" . BangladeshiCurencyFormat($ProductPrice) . "/-</td>
+            <td class='text-right'>" . BangladeshiCurencyFormat($subTotal) . "/-</td>
             <td class='text-right'>" . BangladeshiCurencyFormat($CrAmount) . "/-</td>
             <td class='text-right'>" . number_format($PercentCollection, 2) . "%</td>
             <td class='text-right'>" . BangladeshiCurencyFormat($DueAmount) . "/-</td>
@@ -111,16 +128,16 @@ if ($FromDate != '0000-00-00' && $ToDate != '0000-00-00') {
             <td class='text-right'>" . implode(', ', $DrVoucherNos) . "</td>
         </tr>";
 
-        // Totals
-        $TotalCrAmount += $CrAmount;
-        $TotalDrAmount += $DrAmount;
-        $TotalDueAmount += $DueAmount;
-        $TotalFlatPrice += $ProductPrice;
-        $TotalShareQty += $ShareQty;
-        $sl++;
-        $Count++;
-    }
+    // Totals
+    $TotalCrAmount += $CrAmount;
+    $TotalDrAmount += $DrAmount;
+    $TotalDueAmount += $DueAmount;
+    $TotalFlatPrice += $subTotal;
+    $TotalShareQty += $ShareQty;
+    $sl++;
+    $Count++;
 }
+
 
 
 $MainContent .= '
@@ -181,8 +198,14 @@ $MainContent .= '
     <div class="projectName text-center m-b-30 m-t-30">
         <h4 style="font-weight: bold">Customer Party Ledger Summary </h4>
 
-        <h4 style="font-weight: normal">'.$ProjectName.'</h4>
-        <p class="text-right">From: '.$FromDate.' To:  '.$ToDate.'</p>
+        <h4 style="font-weight: normal">' . $ProjectName . '</h4>
+        <p class="text-right">' .
+    (
+        (!empty($FromDate) && !empty($ToDate) && $FromDate != '0000-00-00' && $ToDate != '0000-00-00')
+        ? "From: $FromDate To: $ToDate"
+        : "Till Date"
+    ) .
+    '</p>
     </div>
     
     <button class="btn btn-info" onclick="exportToCSV()">Export to CSV</button>
@@ -229,15 +252,15 @@ $MainContent .= '
                 
            <tr style="font-weight: bold">
     <td colspan="8" class="text-right">Total =</td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalFlatPrice).'</td>
-    <td class="text-right">'.$TotalShareQty.'</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalFlatPrice) . '</td>
+    <td class="text-right">' . $TotalShareQty . '</td>
     <td></td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalFlatPrice).'</</td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalCrAmount).'</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalFlatPrice) . '</</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalCrAmount) . '</td>
     <td></td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalDueAmount).'</td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalCrAmount - $TotalDrAmount).'</td>
-    <td class="text-right">'.BangladeshiCurencyFormat($TotalDrAmount).'</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalDueAmount) . '</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalCrAmount - $TotalDrAmount) . '</td>
+    <td class="text-right">' . BangladeshiCurencyFormat($TotalDrAmount) . '</td>
     <td colspan="2"></td>
 </tr>
              

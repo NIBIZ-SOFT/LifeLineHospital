@@ -19,18 +19,9 @@
 		$Where.=" and {$_REQUEST["SearchCombo"]} LIKE '%{$_POST["FreeText"]}%'";
 
 
-$MainContentmmmm .='<div class="widget-box">
-        <div class="widget-title">
-            <span class="icon">
-                <i class="icon-th-list"></i>
-            </span>				
-            <h5>Assaign Contructor </h5>
-        </div>
-        <div class="d-flex flex-wrap gap-2 justify-content-start">
-            <a href="'.ApplicationURL("AssaignContructor","Manage").'" class="btn btn-success m-1">Contructor</a>
-        </div>	
-				
-	</div>';
+$MainContent .='            <a href="'.ApplicationURL("AssaignContructor","Manage").'" class="btn btn-success m-1">Assaign Contructor</a>
+<a href="' . ApplicationURL("AssaignLandOwner", "Manage") . '" class="btn btn-success m-1">Assaign LandOwner</a>
+';
 
 
 	// DataGrid

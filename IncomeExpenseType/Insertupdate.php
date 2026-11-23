@@ -63,11 +63,11 @@ $MainContent = '
     </div>
 </div>';
 
-$MainContent.=FormInsertUpdate(
-		$EntityName=$EntityLower,
-		$FormTitle,
-		$Input,
-		$ButtonCaption,
-		$ActionURL
-	);
+// $MainContent.=FormInsertUpdate(
+// 		$EntityName=$EntityLower,
+// 		$FormTitle,
+// 		$Input,
+// 		$ButtonCaption,
+// 		$ActionURL
+// 	);
 ?>

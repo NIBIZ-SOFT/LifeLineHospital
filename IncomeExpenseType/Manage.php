@@ -36,19 +36,21 @@ $MainContent .= '
         </form>
         <hr>
         ';
+        $BS = "SELECT name as Value FROM tblbalancesheet WHERE BalanceSheetID =:FinancialPositionList";
+
 	// DataGrid
-    $MainContent.= CTL_Datagrid(
+    $MainContent .= CTL_Datagrid(
         $Entity,
-        $ColumnName=array( "IncomeExpenseTypeID","Name",  "GLCode"   ,"{$Entity}IsActive" ),
-        $ColumnTitle=array( "Type ID","Name", "GL Code"  ,"IsActive" ),
-        $ColumnAlign=array( "left"  ,"left"  ,"left"  , "left" ),
-        $ColumnType=array( "text"  ,"text"  ,"text"  ,"yes/no"),
-        $Rows=SQL_Select($Entity="{$Entity}", $Where ,  $OrderBy="{$_REQUEST["SortBy"]} {$_REQUEST["SortType"]}", $SingleRow=false, $RecordShowFrom=$_REQUEST["RecordShowFrom"], $RecordShowUpTo=$Application["DatagridRowsDefault"], $Debug=false),
-        $SearchHTML="".CTL_InputText($Name="FreeText","","",26, $Class="DataGridSearchBox")." ",
-        $ActionLinks=true,
-        $SearchPanel=true,
-        $ControlPanel=true,
-        $EntityAlias="".$EntityCaption."",
-        $AddButton=true
+        $ColumnName = array("IncomeExpenseTypeID", "Name",  "GLCode", $BS, "{$Entity}IsActive"),
+        $ColumnTitle = array("Type ID", "Name", "GL Code", "Balance Sheet Perticulars", "IsActive"),
+        $ColumnAlign = array("left", "left", "left", "left", "left"),
+        $ColumnType = array("text", "text", "text", "sql", "yes/no"),
+        $Rows = SQL_Select($Entity = "{$Entity}", $Where,  $OrderBy = "{$_REQUEST["SortBy"]} {$_REQUEST["SortType"]}", $SingleRow = false, $RecordShowFrom = $_REQUEST["RecordShowFrom"], $RecordShowUpTo = $Application["DatagridRowsDefault"], $Debug = false),
+        $SearchHTML = "" . CTL_InputText($Name = "FreeText", "", "", 26, $Class = "DataGridSearchBox") . " ",
+        $ActionLinks = true,
+        $SearchPanel = true,
+        $ControlPanel = true,
+        $EntityAlias = "" . $EntityCaption . "",
+        $AddButton = true
     );
 ?>

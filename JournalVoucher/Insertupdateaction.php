@@ -1,6 +1,7 @@
 <?php
 include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
 
+
 $UpdateMode = false;
 if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"])) {
     $UpdateMode = true;
@@ -34,14 +35,32 @@ if ($ErrorUserInput["_Error"]) {
     // Type handling
     if ($_POST["Type"] == 0) {
         $_POST["VendorID"] = 0;
+        $_POST["LandOwnerID"] = 0;
         $_POST["ContructorID"] = 0;
+        $_POST["CustomerID"] = 0;
         $_POST["BillPhase"] = 0;
         $_POST["BillDate"] = 0;
     } elseif ($_POST["Type"] == 1) {
         $_POST["VendorID"] = 0;
-    } else {
+        $_POST["LandOwnerID"] = 0;
+        $_POST["CustomerID"] = 0;
+    }  elseif ($_POST["Type"] == 3) {
+        $_POST["VendorID"] = 0;
         $_POST["ContructorID"] = 0;
+        $_POST["CustomerID"] = 0;
+    }  elseif ($_POST["Type"] == 4) {
+        $_POST["VendorID"] = 0;
+        $_POST["ContructorID"] = 0;
+        $_POST["LandOwnerID"] = 0;
     }
+    else {
+        $_POST["ContructorID"] = 0;
+        $_POST["LandOwnerID"] = 0;
+        $_POST["CustomerID"] = 0;
+    }
+
+    // print_r($_POST["LandOwnerID"]);
+    // die();
 
     if (!$UpdateMode) {
         $voucherNo = !empty($journalvoucher) ? $journalvoucher[0]["VoucherNo"] + 2 : 1;
@@ -72,6 +91,8 @@ if ($ErrorUserInput["_Error"]) {
                     "VendorID" => $_POST["VendorID"],
                     "VendorName" => GetVendorName($_POST["VendorID"]),
                     "ContructorID" => $_POST["ContructorID"],
+                    "LandOwnerID" => $_POST["LandOwnerID"],
+                    "CustomerID" => $_POST["CustomerID"],
                     "ContructorName" => GetContructorName($_POST["ContructorID"]),
                     "Date" => $_POST["Date"],
                     "VoucherNo" => $voucherNo,
@@ -106,6 +127,8 @@ if ($ErrorUserInput["_Error"]) {
                     "VendorID" => $_POST["VendorID"],
                     "VendorName" => GetVendorName($_POST["VendorID"]),
                     "ContructorID" => $_POST["ContructorID"],
+                    "CustomerID" => $_POST["CustomerID"],
+                    "LandOwnerID" => $_POST["LandOwnerID"],
                     "ContructorName" => GetContructorName($_POST["ContructorID"]),
                     "BillPhase" => $_POST["BillPhase"],
                     "BillDate" => $_POST["BillDate"],
@@ -145,11 +168,13 @@ if ($ErrorUserInput["_Error"]) {
                         "VoucherNo" => $voucherNo,
                         "VoucherType" => "JV",
                         "BillPhase" => $_POST["BillPhase"],
+                        "LandOwnerID" => $_POST["LandOwnerID"],
                         "BillDate" => $_POST["BillDate"],
                         "BillNo" => $_POST["BillNo"],
                         "VendorID" => $_POST["VendorID"],
                         "VendorName" => GetVendorName($_POST["VendorID"]),
                         "ContructorID" => $_POST["ContructorID"],
+                        "CustomerID" => $_POST["CustomerID"],
                         "ContructorName" => GetContructorName($_POST["ContructorID"]),
                         "Description" => $_POST["Description"],
                         "dr" => $_POST["Amount"]["dr"][$i],
@@ -174,12 +199,14 @@ if ($ErrorUserInput["_Error"]) {
                         "Date" => $_POST["Date"],
                         "VoucherNo" => $voucherNo,
                         "VoucherType" => "JV",
+                        "LandOwnerID" => $_POST["LandOwnerID"],
                         "BillPhase" => $_POST["BillPhase"],
                         "BillDate" => $_POST["BillDate"],
                         "BillNo" => $_POST["BillNo"],
                         "VendorID" => $_POST["VendorID"],
                         "VendorName" => GetVendorName($_POST["VendorID"]),
                         "ContructorID" => $_POST["ContructorID"],
+                        "CustomerID" => $_POST["CustomerID"],
                         "ContructorName" => GetContructorName($_POST["ContructorID"]),
                         "Description" => $_POST["Description"],
                         "dr" => 0,

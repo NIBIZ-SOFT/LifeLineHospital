@@ -37,6 +37,7 @@ if ($ErrorUserInput["_Error"]) {
 
 
             "{$Entity}IsType" => $_POST["{$Entity}IsType"],
+            "ExpenseHeadCrIsType" => $_POST["{$Entity}IsType"],
             "{$Entity}IsStock" => $_POST["{$Entity}IsStock"],
             "{$Entity}IsActive" => $_POST["{$Entity}IsActive"],
         ),

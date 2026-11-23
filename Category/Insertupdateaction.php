@@ -1,4 +1,4 @@
-<?
+<?php
 	include "./script/{$_REQUEST["Base"]}/Scriptvariables.php";
 
 
@@ -21,7 +21,7 @@
 	    $Where="";
 	    if($UpdateMode)$Where="{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'";
 
-
+		$_POST["ProjectImage"] = ProcessUpload("ProjectImage", $Application["UploadPath"]);
 
 		// give the data dase fields name and the post value name
 	    $TheEntityName=SQL_InsertUpdate(
@@ -32,9 +32,17 @@
 		        "Address"=>$_POST["Address"],
 
 		        "ProjectLoactionID"=>$_POST["ProjectLoactionID"],
+
+				"ProjectImage" => $_POST["ProjectImage"],
+
 		        "ProjectLoactionName"=> GetProjectLocationName($_POST["ProjectLoactionID"]),
 
+		        "ProjectTypeID"=>$_POST["ProjectTypeID"],
+		        "CompanyShare"=>isset($_POST["CompanyShare"]) && $_POST["CompanyShare"] !== "" ? $_POST["CompanyShare"] : null,
+		        "LandOwnerShare"=>isset($_POST["LandOwnerShare"]) && $_POST["LandOwnerShare"] !== "" ? $_POST["LandOwnerShare"] : null,
+
 		        "BuildingHeight"=>$_POST["BuildingHeight"],
+				"UnitsPerFloor" => $_POST["UnitsPerFloor"],
 		        "HandOver"=>$_POST["HandOver"],
 		        "ProjectLaunchingDate"=>$_POST["ProjectLaunchingDate"],
 		        "Description"=>$_POST["Description"],

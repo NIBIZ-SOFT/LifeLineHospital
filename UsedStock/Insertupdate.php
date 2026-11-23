@@ -24,16 +24,44 @@ if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"]) && !i
     $UpdateMode = true;
     $FormTitle = "Update $EntityCaption";
     $ButtonCaption = "Update";
-    $ActionURL = ApplicationURL("{$_REQUEST["Base"]}", "Insertupdateaction", $Entity . "ID={$_REQUEST[$Entity."ID"]}&" . $Entity . "UUID={$_REQUEST[$Entity."UUID"]}");
-    if ($UpdateMode && !isset($_POST["" . $Entity . "ID"])) $TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$Entity}ID = {$_REQUEST[$Entity."ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity."UUID"]}'", $OrderBy = "{$OrderByValue}", $SingleRow = true);
+    $ActionURL = ApplicationURL("{$_REQUEST["Base"]}", "Insertupdateaction", $Entity . "ID={$_REQUEST[$Entity . "ID"]}&" . $Entity . "UUID={$_REQUEST[$Entity . "UUID"]}");
+    if ($UpdateMode && !isset($_POST["" . $Entity . "ID"])) $TheEntityName = SQL_Select($Entity = "{$Entity}", $Where = "{$Entity}ID = {$_REQUEST[$Entity . "ID"]} AND {$Entity}UUID = '{$_REQUEST[$Entity . "UUID"]}'", $OrderBy = "{$OrderByValue}", $SingleRow = true);
 }
 
 // Input sytem display goes here
 $Input = array();
 
 $Input[] = array("VariableName" => "FormProjectID", "Caption" => "Project Name", "ControlHTML" => CCTL_ProductsCategory($Name = "ProjectID", $TheEntityName["ProjectID"], $Where = "", $PrependBlankOption = true));
-$Input[] = array("VariableName" => "FormHeadOfAccountID0", "Caption" => "Head of Accounts", "ControlHTML" => GetExpenseIDForStock($Name = "HeadOfAccountID", $TheEntityName["HeadOfAccountID"], $Where = "", $PrependBlankOption = true, $Class = "form-select"). " <span id='reDetails'>Quentity <b id='qnt'></b>, Average Rate <b id='rate'></b>,Amount <b id='amount'></b></span> ");
+$ExpenseHeads = SQL_Select(
+    "ExpenseHead",
+    "1=1",
+    "ExpenseHeadName ASC"
+);
 
+$HeadOfAccountOptions = '<select name="HeadOfAccountID" id="HeadOfAccountID" class="form-select smart-select">';
+
+if (!empty($ExpenseHeads)) {
+    foreach ($ExpenseHeads as $ExpenseHead) {
+        $Selected = (
+            isset($TheEntityName["HeadOfAccountID"]) &&
+            $TheEntityName["HeadOfAccountID"] == $ExpenseHead["ExpenseHeadID"]
+        ) ? ' selected' : '';
+
+        $HeadOfAccountOptions .=
+            '<option value="' . $ExpenseHead["ExpenseHeadID"] . '"' . $Selected . '>'
+            . htmlspecialchars($ExpenseHead["ExpenseHeadName"])
+            . '</option>';
+    }
+}
+
+$HeadOfAccountOptions .= '</select>';
+
+$Input[] = array(
+    "VariableName" => "FormHeadOfAccountID0",
+    "Caption" => "Head of Accounts",
+    "ControlHTML" => $HeadOfAccountOptions .
+        " <span id='reDetails'>Quentity <b id='qnt'></b>, Average Rate <b id='rate'></b>,Amount <b id='amount'></b></span> "
+);
 
 $Input[] = array("VariableName" => "Qty", "Caption" => "Quantity", "ControlHTML" => CTL_InputText("Qty", $TheEntityName["Qty"], "", 30, "required"));
 $Input[] = array("VariableName" => "Rate", "Caption" => "Rate", "ControlHTML" => CTL_InputText("Rate", $TheEntityName["Rate"], "", 30, "required"));
@@ -57,7 +85,12 @@ $MainContent .= FormInsertUpdate(
 
 $MainContent .= '
 
-    
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/NIBIZ-SOFT/RealBizDEVCDN/SmartSelect.css">
+<script src="https://cdn.jsdelivr.net/gh/NIBIZ-SOFT/RealBizDEVCDN/SmartSelect.js"></script>
     <script>
     
         var Model = (function() {
@@ -283,8 +316,11 @@ $MainContent .= '
                     
                     
                     Fields.QtyDom.type="number";
+                    Fields.QtyDom.step="0.01";
                     Fields.RateDom.type="number";
+                    Fields.RateDom.step="0.01";
                     Fields.ValueDom.type="number";
+                    Fields.ValueDom.step="0.01";
                     
                     Fields.reSpanDetailsDom.style.display="none";
                     Fields.ValueDom.readOnly="true";
@@ -306,7 +342,3 @@ $MainContent .= '
 
 
 ';
-
-
-
-?>

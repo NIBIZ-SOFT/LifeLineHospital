@@ -49,6 +49,9 @@ if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"]) && !i
     $TheEntityName["formAccaunt"]=$contravoucherDetails[0]["BankCashID"];
     $TheEntityName["toAccaunt"]=$contravoucherDetails[1]["BankCashID"];
 
+    $TheEntityName["FromProjectID"]=$contravoucherDetails[0]["ProjectID"];
+    $TheEntityName["ToProjectID"]=$contravoucherDetails[1]["ProjectID"];
+
 
 
     $TheEntityName["Amount"]=$contravoucherDetails[0]["dr"];
@@ -66,17 +69,29 @@ if (isset($_REQUEST[$Entity . "ID"]) && isset($_REQUEST[$Entity . "UUID"]) && !i
 // Input sytem display goes here
 $Input = array();
 
-$Input[] = array("VariableName" => "ProjectName", "Caption" => "ProjectName", "ControlHTML" => CCTL_ProductsCategory($Name = "ProjectID", $TheEntityName["ProjectID"], $Where = "", $PrependBlankOption = true));
+$Input[] = array("VariableName" => "ProjectName", "Caption" => "From ProjectName", "ControlHTML" => CCTL_ProductsCategory($Name = "FromProjectID", $TheEntityName["FromProjectID"], $Where = "", $PrependBlankOption = true));
+$Input[] = array("VariableName" => "ProjectName", "Caption" => "To ProjectName", "ControlHTML" => CCTL_ProductsCategory($Name = "ProjectID", $TheEntityName["ToProjectID"], $Where = "", $PrependBlankOption = true));
 
-$Input[] = array("VariableName" => "formAccaunt", "Caption" => "Head of Accounts(Dr Bank/Cash)", "ControlHTML" => CCTL_BankCash($Name = "formAccaunt", $TheEntityName["formAccaunt"], $Where = "", $PrependBlankOption = false));
-$Input[] = array("VariableName" => "toAccaunt", "Caption" => "Head of Accounts(Cr Bank/Cash)", "ControlHTML" => CCTL_BankCash($Name = "toAccaunt", $TheEntityName["toAccaunt"], $Where = "", $PrependBlankOption = false));
+//From Chart of Account
+$Input[] = array("VariableName" => "formHeadOfAccount", "Caption" => "From Chart of Accounts", "ControlHTML" => GetExpenseID($Name = "formHeadOfAccount", $TheEntityName["formHeadOfAccount"], $Where = "", $PrependBlankOption = true));
+
+//To Chart of Account
+$Input[] = array("VariableName" => "toHeadOfAccount", "Caption" => "To Chart of Accounts", "ControlHTML" => GetExpenseID($Name = "toHeadOfAccount", $TheEntityName["toHeadOfAccount"], $Where = "", $PrependBlankOption = true));
+
+//From Bank/Cash
+$Input[] = array("VariableName" => "formAccaunt", "Caption" => "From Head of Accounts(Dr Bank/Cash)", "ControlHTML" => CCTL_BankCash($Name = "formAccaunt", $TheEntityName["formAccaunt"], $Where = "", $PrependBlankOption = false));
+
+//To Bank/Cash
+$Input[] = array("VariableName" => "toAccaunt", "Caption" => "TO Head of Accounts(Cr Bank/Cash)", "ControlHTML" => CCTL_BankCash($Name = "toAccaunt", $TheEntityName["toAccaunt"], $Where = "", $PrependBlankOption = false));
+
+//Cheque Number
 $Input[] = array("VariableName" => "ChequeNumber", "Caption" => "ChequeNumber", "ControlHTML" => CTL_InputText("ChequeNumber", $TheEntityName["ChequeNumber"], "", 30, "required"));
 
 //$Input[] = array("VariableName" => "HeadOfAccountName", "Caption" => "HeadOfAccountName", "ControlHTML" => GetExpenseID($Name = "HeadOfAccountID", $TheEntityName["HeadOfAccountID"], $Where = "", $PrependBlankOption = true));
 
 $Input[] = array("VariableName" => "Amount", "Caption" => "Amount", "ControlHTML" => CTL_InputText("Amount", $TheEntityName["Amount"], "", 30, "required"));
-$Input[] = array("VariableName" => "Date", "Caption" => "Date", "ControlHTML" => CTL_InputText("Date", $TheEntityName["Date"], "", 30, "required"));
-$Input[] = array("VariableName" => "Description", "Caption" => "Description", "ControlHTML" => CTL_InputTextArea("Description", $TheEntityName["Description"], "", 4, "required").'<input type="hidden" name="VoucherNo" value="'.$TheEntityName["VoucherNo"].'" />');
+$Input[] = array("VariableName" => "Date", "Caption" => "Date", "ControlHTML" => CTL_InputTextDate("Date", $TheEntityName["Date"], "", 30, "required"));
+$Input[] = array("VariableName" => "Description", "Caption" => "Narration", "ControlHTML" => CTL_InputTextArea("Description", $TheEntityName["Description"], "", 4, "required").'<input type="hidden" name="VoucherNo" value="'.$TheEntityName["VoucherNo"].'" />');
 
 
 $Input[]=array("VariableName"=>"IsDisplay", "Caption"=>"Confirm?", "ControlHTML"=>CTL_InputRadioSet($VariableName="{$Entity}IsDisplay", $Captions=array("No", "Yes"), $Values=array(1, 0), $CurrentValue=$TheEntityName["{$Entity}IsDisplay"]), "Required"=>false);
@@ -114,6 +129,7 @@ $MainContent .= '
     
    
     Amount.type="number";
+    Amount.step="0.01";
     
     var form = document.querySelector("form");
     
@@ -184,5 +200,17 @@ $MainContent .= '
 
 ';
 
+
+
+
+// $sql = "
+// ALTER TABLE `tblcontravoucher` ADD `formHeadOfAccountName` VARCHAR(200) NULL DEFAULT NULL AFTER `BankCashName`, ADD `formHeadOfAccount` VARCHAR(200) NULL DEFAULT NULL AFTER `formHeadOfAccountName`, ADD `toHeadOfAccountName` VARCHAR(200) NULL DEFAULT NULL AFTER `formHeadOfAccount`, ADD `toHeadOfAccount` VARCHAR(200) NULL DEFAULT NULL AFTER `toHeadOfAccountName`;
+// ";
+
+// if (mysql_query($sql)) {
+//     echo "Columns added successfully.";
+// } else {
+//     echo "Error adding columns: " . mysql_error();
+// }
 
 ?>

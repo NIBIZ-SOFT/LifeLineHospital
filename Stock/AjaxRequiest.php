@@ -1,56 +1,58 @@
 <?php
 
-    //echo "purchase where CategoryID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and confirmRequisitonId={$_POST["RequisitionID"]} and PurchaseConfirmID='{$_POST["PurchaseID"]}' and Confirm='Confirm' ";
+// Returns EVERY line item on the selected Purchase Order (ProjectID +
+// VendorID + PurchaseID), each with its remaining orderable quantity
+// (ordered qty minus qty already entered into stock for that item),
+// so the Stock form can render one row per product instead of forcing
+// the user to add products one Head-of-Account at a time.
+//
+// Mirrors the original single-item lookup, just grouped per HeadOfAccountID
+// instead of filtered to one.
 
-//if (!empty($_POST["ProjectID"]) and !empty($_POST["HeadOfAccountID"])  and !empty($_POST["VendorID"])  and !empty($_POST["RequisitionID"]) and !empty($_POST["PurchaseID"]) ){
-if (!empty($_POST["ProjectID"]) and !empty($_POST["HeadOfAccountID"])  and !empty($_POST["VendorID"])  and  !empty($_POST["PurchaseID"]) ){
+$requisitionDatas = array();
 
+if (!empty($_POST["ProjectID"]) and !empty($_POST["VendorID"]) and !empty($_POST["PurchaseID"])) {
 
-    //echo "purchase where CategoryID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and confirmRequisitonId={$_POST["RequisitionID"]} and PurchaseConfirmID='{$_POST["PurchaseID"]}' and Confirm='Confirm' ";
+    $ConfirmPurches = SQL_Select(
+        "purchase where CategoryID={$_POST["ProjectID"]} and VendorID={$_POST["VendorID"]} and PurchaseConfirmID='{$_POST["PurchaseID"]}' and Confirm='Confirm'"
+    );
 
-    //$ConfirmPurches=SQL_Select("purchase where CategoryID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and confirmRequisitonId={$_POST["RequisitionID"]} and PurchaseConfirmID='{$_POST["PurchaseID"]}' and Confirm='Confirm' ");
-    $ConfirmPurches=SQL_Select("purchase where CategoryID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and PurchaseConfirmID='{$_POST["PurchaseID"]}' and Confirm='Confirm' ");
+    if (!empty($ConfirmPurches)) {
 
-    $items=$ConfirmPurches[0]["Items"];
+        $items = json_decode($ConfirmPurches[0]["Items"]);
 
-// ProjectID
-// 18
+        // Sum already-stocked qty per HeadOfAccountID for this exact PO,
+        // so each item's remaining qty accounts for stock already entered.
+        $StockSQL = mysql_query(
+            "select HeadOfAccountID, SUM(Qty) as TotalQty from tblstock
+             where ProjectID={$_POST["ProjectID"]} and VendorID={$_POST["VendorID"]} and PurchaseID='{$_POST["PurchaseID"]}'
+             group by HeadOfAccountID"
+        );
 
-// HeadOfAccountID
-// 26
-
-// VendorID
-// 3
-
-// RequisitionID
-// 10
-
-// PurchaseID
-// POD25-00004
-
-
-    //echo "select SUM(Qty) as TotalQty,SUM(Rate) as TotalRate,SUM(Value) as TotalValue from tblstock where HeadOfAccountID = {$_POST["HeadOfAccountID"]} and ProjectID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and RequisitionID={$_POST["RequisitionID"]} and PurchaseID='{$_POST["PurchaseID"]}'  ";
-
-    $StockSQL = mysql_query("select SUM(Qty) as TotalQty,SUM(Rate) as TotalRate,SUM(Value) as TotalValue from tblstock where HeadOfAccountID = {$_POST["HeadOfAccountID"]} and ProjectID={$_POST["ProjectID"]} and  VendorID={$_POST["VendorID"]} and  PurchaseID='{$_POST["PurchaseID"]}'  ");
-    $Stock = @mysql_fetch_array($StockSQL, MYSQL_ASSOC);
-
-
-    $items=json_decode($items);
-    //print_r($items);
-
-    $requisitionDatas=[];
-    foreach ($items as $item){
-        if ($item->expenseHead==$_POST["HeadOfAccountID"]){
-            $requisitionDatas["requisitionQty"]=$item->requisitionQty - $Stock["TotalQty"];
-            $requisitionDatas["requisitionRate"]=$item->requisitionRate;
-            $requisitionDatas["requisitionAmount"]=$item->requisitionAmount;
-
+        $StockedQtyByHead = array();
+        while ($row = mysql_fetch_array($StockSQL, MYSQL_ASSOC)) {
+            $StockedQtyByHead[$row["HeadOfAccountID"]] = (float)$row["TotalQty"];
         }
 
+        foreach ($items as $item) {
+
+            $alreadyStocked = isset($StockedQtyByHead[$item->expenseHead]) ? $StockedQtyByHead[$item->expenseHead] : 0;
+            $remainingQty = $item->requisitionQty - $alreadyStocked;
+
+            if ($remainingQty <= 0) {
+                continue;
+            }
+
+            $requisitionDatas[] = array(
+                "expenseHead"       => $item->expenseHead,
+                "expenseHeadName"   => GetExpenseHeadName($item->expenseHead),
+                "Description"       => isset($item->Description) ? $item->Description : "",
+                "requisitionQty"    => $remainingQty,
+                "requisitionRate"   => $item->requisitionRate,
+                "requisitionAmount" => $remainingQty * $item->requisitionRate
+            );
+        }
     }
-
-    echo json_encode($requisitionDatas);
-
-
-
 }
+
+echo json_encode($requisitionDatas);

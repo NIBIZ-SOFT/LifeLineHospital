@@ -159,9 +159,9 @@ $MainContent .= '
                     <label class="form-label">Projects</label>
                     ' . CCTL_ProductsCategory("CategoryID", $TheEntityName["CategoryID"], "", true) . '
                 </div>
-                <div class="col-md-6 col-12">
+                 <div class="col-md-6 col-12">
                     <label class="form-label">Assign User</label>
-                    ' . CCTL_UserList("EmployeeID", $TheEntityName["EmployeeID"], "", true, "required") . '
+                    ' . CCTL_Employee("EmployeeID", $TheEntityName["EmployeeID"], "", true, "required") . '
                 </div>
             </div>
 
