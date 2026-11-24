@@ -15,6 +15,11 @@ $Settings = SQL_Select("Settings", "SettingsID=1", "", true);
 
 $user = SQL_Select("user", "UserID={$_SESSION['UserID']}", "", true);
 
+$isAdmin = (isset($_SESSION['UserID']) && $_SESSION['UserID'] == 1) ||
+           (isset($_SESSION['user_type']) && strtolower(trim($_SESSION['user_type'])) === 'admin') ||
+           (isset($user['user_type']) && strtolower(trim($user['user_type'])) === 'admin') ||
+           GetPermission("OptionSettings", true);
+
 if (empty($user['UserPicture'])) {
     $UserImage = '<img src="https://w7.pngwing.com/pngs/205/731/png-transparent-default-avatar-thumbnail.png" class="avatar img-fluid rounded me-1" alt="' . htmlspecialchars($_SESSION["UserName"]) . '" />';
 } else {
@@ -353,7 +358,7 @@ if (GetPermission("OptionSales", true)) {
     $salesMenuExpanded = ($activeSales || $activeSalesReport) ? 'show' : '';
 
     // Only show Seller Management (Seller List, Payment) to Admin or users with global/edit sales permission
-    $canManageSellers = (!empty($_SESSION['OptionSalesEdit']) || !empty($_SESSION['OptionSalesScope']) || (isset($_SESSION['UserID']) && $_SESSION['UserID'] == 1));
+    $canManageSellers = ($isAdmin || !empty($_SESSION['OptionSalesEdit']) || !empty($_SESSION['OptionSalesScope']));
 
     if ($canManageSellers) {
         $BeforeMainContent .= '
@@ -398,7 +403,7 @@ if (GetPermission("OptionSales", true)) {
             </li>
     ';
 
-    if (GetPermission("OptionSalesReport", true)) {
+    if ($isAdmin || GetPermission("OptionSalesReport", true)) {
         $BeforeMainContent .= '
             <li class="sidebar-item ' . $activeSalesReport . '">
                 <a class="sidebar-link" href="' . ApplicationURL("SalesReport", "Manage") . '">
@@ -414,15 +419,18 @@ if (GetPermission("OptionSales", true)) {
 }
 
 // Commission & Referral Management
-if (GetPermission("OptionCommission", true)) {
-    $activeCommManage  = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Manage') ? 'active' : '';
-    $activeCommDash    = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Dashboard') ? 'active' : '';
-    $activeCommReports = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Reports') ? 'active' : '';
-    $activeCommPay     = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Pay') ? 'active' : '';
-    $activeCommUser    = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'UserDetails') ? 'active' : '';
+if ($isAdmin || GetPermission("OptionCommission", true)) {
+    $activeCommManage   = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Manage') ? 'active' : '';
+    $activeCommDash     = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Dashboard') ? 'active' : '';
+    $activeCommReports  = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Reports') ? 'active' : '';
+    $activeCommPay      = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'Pay') ? 'active' : '';
+    $activeCommHist     = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'PaymentHistory') ? 'active' : '';
+    $activeCommSettings = (isset($_GET['Base']) && $_GET['Base'] === 'CommissionSettings') ? 'active' : '';
+    $activeSallerComm   = (isset($_GET['Base']) && $_GET['Base'] === 'SallerCommission') ? 'active' : '';
+    $activeCommUser     = (isset($_GET['Base']) && $_GET['Base'] === 'Commission' && isset($_GET['Script']) && $_GET['Script'] === 'UserDetails') ? 'active' : '';
 
-    $commMenuExpanded = ($activeCommManage || $activeCommDash || $activeCommReports || $activeCommPay || $activeCommUser) ? 'show' : '';
-    $userScopeIsGlobal = (!empty($_SESSION['OptionCommissionScope']) || (isset($_SESSION['UserID']) && $_SESSION['UserID'] == 1));
+    $commMenuExpanded = ($activeCommManage || $activeCommDash || $activeCommReports || $activeCommPay || $activeCommHist || $activeCommSettings || $activeSallerComm || $activeCommUser) ? 'show' : '';
+    $userScopeIsGlobal = ($isAdmin || !empty($_SESSION['OptionCommissionScope']));
 
     if (!$userScopeIsGlobal) {
         // Personal Commission view for Salesperson / Director
@@ -451,19 +459,32 @@ if (GetPermission("OptionCommission", true)) {
                     <i class="fas fa-list-alt me-2"></i> All Commissions
                 </a>
             </li>';
-        if (!empty($_SESSION['OptionCommissionPay']) || (isset($_SESSION['UserID']) && $_SESSION['UserID'] == 1)) {
+        if ($isAdmin || !empty($_SESSION['OptionCommissionPay'])) {
             $BeforeMainContent .= '
             <li class="sidebar-item ' . $activeCommPay . '">
                 <a class="sidebar-link" href="' . ApplicationURL("Commission", "Pay") . '">
                     <i class="fas fa-money-check-alt me-2"></i> Payout Commission
                 </a>
+            </li>
+            <li class="sidebar-item ' . $activeCommHist . '">
+                <a class="sidebar-link" href="' . ApplicationURL("Commission", "PaymentHistory") . '">
+                    <i class="fas fa-history me-2"></i> Payment History
+                </a>
             </li>';
         }
-        if (!empty($_SESSION['OptionCommissionReports']) || (isset($_SESSION['UserID']) && $_SESSION['UserID'] == 1)) {
+        if ($isAdmin || !empty($_SESSION['OptionCommissionReports'])) {
             $BeforeMainContent .= '
             <li class="sidebar-item ' . $activeCommReports . '">
                 <a class="sidebar-link" href="' . ApplicationURL("Commission", "Reports") . '">
                     <i class="fas fa-chart-pie me-2"></i> Commission Reports
+                </a>
+            </li>';
+        }
+        if ($isAdmin || !empty($_SESSION['OptionCommissionRules'])) {
+            $BeforeMainContent .= '
+            <li class="sidebar-item ' . $activeCommSettings . '">
+                <a class="sidebar-link" href="' . ApplicationURL("CommissionSettings", "Manage") . '">
+                    <i class="fas fa-sliders-h me-2"></i> Commission Rules & Target
                 </a>
             </li>';
         }

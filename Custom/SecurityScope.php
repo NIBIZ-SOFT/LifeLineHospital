@@ -26,6 +26,9 @@ class SecurityScope {
         self::runSql("ALTER TABLE tbluser ADD COLUMN OptionCommissionScope TINYINT(1) NOT NULL DEFAULT 0 AFTER OptionCommissionReports");
         self::runSql("ALTER TABLE tblcustomer ADD COLUMN CreatedByUserID INT(11) NOT NULL DEFAULT 0 AFTER CustomerID");
         self::runSql("CREATE INDEX idx_tblcustomer_createdby ON tblcustomer(CreatedByUserID)");
+
+        // Ensure Admin user has full commission permissions by default
+        self::runSql("UPDATE tbluser SET OptionCommission = 1, OptionCommissionView = 1, OptionCommissionRules = 1, OptionCommissionPay = 1, OptionCommissionReports = 1, OptionCommissionScope = 1 WHERE UserID = 1 OR LOWER(user_type) = 'admin'");
     }
 
     /**
